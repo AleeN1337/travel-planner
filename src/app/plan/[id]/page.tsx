@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { PlanView } from "@/components/plan/plan-view";
 import { getTripPlanById } from "@/lib/plans/get-plan";
+import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -30,7 +31,23 @@ export async function generateMetadata({
 
 export default async function PlanPage({ params }: PlanPageProps) {
   const { id } = await params;
-  const plan = await getTripPlanById(id);
+  let plan = await getTripPlanById(id);
+
+  if (!plan) {
+    notFound();
+  }
+
+  const needsGeocode = plan.days.some((d) =>
+    d.activities.some((a) => a.latitude == null),
+  );
+  if (needsGeocode) {
+    try {
+      await geocodeTripPlan(id);
+      plan = await getTripPlanById(id);
+    } catch {
+      /* mapa bez pinów — plan tekstowy nadal działa */
+    }
+  }
 
   if (!plan) {
     notFound();
@@ -38,7 +55,7 @@ export default async function PlanPage({ params }: PlanPageProps) {
 
   return (
     <div className="px-4 py-28 sm:px-6">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-6xl">
         <Link
           href="/plan/new"
           className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"

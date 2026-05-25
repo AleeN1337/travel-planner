@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getDb } from "../src/lib/db.ts";
+import { getDb } from "../src/lib/db";
 
 const db = getDb();
 const plan = await db.tripPlan.findFirst({

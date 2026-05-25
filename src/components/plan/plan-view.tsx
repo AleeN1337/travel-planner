@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Calendar, MapPin, Wallet } from "lucide-react";
 import { PlanDayCard } from "@/components/plan/plan-day-card";
+import { BudgetPanel } from "@/components/plan/budget-panel";
+import { LocalTipsSection } from "@/components/plan/local-tips-section";
+import { PlanMapClient } from "@/components/plan/plan-view-client";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -10,6 +13,7 @@ import {
   TRANSPORT_LABELS,
 } from "@/types/trip";
 import type { TripPlanWithDays } from "@/lib/plans/get-plan";
+import { enrichDay } from "@/lib/plans/plan-utils";
 import { cn } from "@/lib/utils";
 
 export function PlanView({ plan }: { plan: TripPlanWithDays }) {
@@ -17,6 +21,8 @@ export function PlanView({ plan }: { plan: TripPlanWithDays }) {
   const styleLabel = STYLE_LABELS[plan.travelStyle];
   const paceLabel = PACE_LABELS[plan.paceLevel];
   const transportLabel = TRANSPORT_LABELS[plan.transportMode];
+
+  const enrichedDays = plan.days.map((d) => enrichDay(d, plan.transportMode));
 
   return (
     <div className="space-y-8">
@@ -71,10 +77,23 @@ export function PlanView({ plan }: { plan: TripPlanWithDays }) {
         </div>
       </header>
 
-      <div className="space-y-6">
-        {plan.days.map((day) => (
-          <PlanDayCard key={day.id} day={day} />
-        ))}
+      <div className="grid gap-8 lg:grid-cols-5">
+        <div className="space-y-8 lg:col-span-3">
+          <PlanMapClient days={enrichedDays} />
+          <div className="space-y-6">
+            {enrichedDays.map((day) => (
+              <PlanDayCard
+                key={day.id}
+                day={day}
+                transport={plan.transportMode}
+              />
+            ))}
+          </div>
+        </div>
+        <aside className="space-y-6 lg:col-span-2">
+          <BudgetPanel plan={plan} />
+          <LocalTipsSection plan={plan} />
+        </aside>
       </div>
     </div>
   );

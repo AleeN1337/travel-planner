@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateTripPlan } from "@/lib/ai/generate-plan";
+import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
 import {
   createPlanRecord,
   markPlanFailed,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/plans/persist-plan";
 import { tripWizardSchema } from "@/types/trip";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   let planId: string | undefined;
@@ -28,6 +29,12 @@ export async function POST(request: Request) {
 
     const generated = await generateTripPlan(parsed.data);
     await saveGeneratedPlan(plan.id, generated);
+
+    try {
+      await geocodeTripPlan(plan.id);
+    } catch (geoErr) {
+      console.error("[plans/generate] geocode:", geoErr);
+    }
 
     return NextResponse.json({ id: plan.id });
   } catch (error) {

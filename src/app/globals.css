@@ -222,6 +222,36 @@
   }
 }
 
+.leaflet-container {
+  font-family: inherit;
+  background: oklch(0.14 0.03 265);
+}
+
+.custom-marker {
+  background: transparent;
+  border: none;
+}
+
+.map-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(135deg, oklch(0.72 0.16 195), oklch(0.78 0.17 55));
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 12px oklch(0 0 0 / 40%);
+  border: 2px solid oklch(0.99 0 0 / 90%);
+}
+
+.map-marker-pin span {
+  transform: rotate(45deg);
+  font-size: 11px;
+  font-weight: 700;
+  color: oklch(0.14 0.03 265);
+}
+
 @keyframes pulse-glow {
   0%,
   100% {
