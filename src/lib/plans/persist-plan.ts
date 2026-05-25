@@ -10,10 +10,14 @@ import type {
   TravelStyle,
 } from "@/generated/prisma/client";
 
-export async function createPlanRecord(input: TripWizardInput) {
+export async function createPlanRecord(
+  input: TripWizardInput,
+  userId?: string | null,
+) {
   const db = getDb();
   return db.tripPlan.create({
     data: {
+      userId: userId ?? undefined,
       guestToken: randomUUID(),
       destination: input.destination.trim(),
       daysCount: input.daysCount,
@@ -35,6 +39,7 @@ export async function saveGeneratedPlan(
 
   let totalMin = 0;
   let totalMax = 0;
+  const dayIdByNumber = new Map<number, string>();
 
   for (const day of generated.days) {
     const planDay = await db.planDay.create({
@@ -45,6 +50,7 @@ export async function saveGeneratedPlan(
         summary: day.summary,
       },
     });
+    dayIdByNumber.set(day.dayNumber, planDay.id);
 
     let orderIndex = 0;
     for (const activity of day.activities) {
@@ -68,6 +74,28 @@ export async function saveGeneratedPlan(
       });
     }
   }
+
+  for (const alt of generated.planBAlternatives) {
+    const planDayId = dayIdByNumber.get(alt.dayNumber);
+    if (!planDayId) continue;
+    await db.planBAlternative.create({
+      data: {
+        planDayId,
+        reason: alt.reason,
+        title: alt.title,
+        description: alt.description ?? undefined,
+      },
+    });
+  }
+
+  await db.checklistItem.createMany({
+    data: generated.checklist.map((item, i) => ({
+      tripPlanId: planId,
+      label: item.label,
+      category: item.category ?? undefined,
+      orderIndex: i,
+    })),
+  });
 
   return db.tripPlan.update({
     where: { id: planId },

@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { PlanView } from "@/components/plan/plan-view";
 import { getTripPlanById } from "@/lib/plans/get-plan";
+import { ensureDefaultChecklist } from "@/lib/plans/default-checklist";
 import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
+import { syncWeatherForPlan } from "@/lib/weather/openweather";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -53,6 +55,19 @@ export default async function PlanPage({ params }: PlanPageProps) {
     notFound();
   }
 
+  if (plan.status === "READY") {
+    await ensureDefaultChecklist(id);
+    try {
+      await syncWeatherForPlan(id);
+    } catch {
+      /* pogoda opcjonalna */
+    }
+    plan = await getTripPlanById(id);
+    if (!plan) notFound();
+  }
+
+  const hasWeatherApi = Boolean(process.env.OPENWEATHER_API_KEY);
+
   return (
     <div className="px-4 py-28 sm:px-6">
       <div className="mx-auto max-w-6xl">
@@ -65,7 +80,7 @@ export default async function PlanPage({ params }: PlanPageProps) {
         </Link>
 
         {plan.status === "READY" && plan.days.length > 0 ?
-          <PlanView plan={plan} />
+          <PlanView plan={plan} hasWeatherApi={hasWeatherApi} />
         : plan.status === "FAILED" ?
           <Card className="glass-card border-destructive/30">
             <CardHeader>

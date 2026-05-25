@@ -34,7 +34,16 @@ Wymagania:
 - Konkretne miejsca i nazwy (restauracje, muzea, dzielnice)
 - Koszty costMin/costMax w PLN, realistyczne dla budżetu
 - 1–2 aktywności z isLocalTip: true (lokalne smaczki) na cały plan
-- Dopasuj intensywność do tempa podróży`;
+- Dopasuj intensywność do tempa podróży
+
+Checklista przed wyjazdem (6–14 pozycji):
+- Konkretne rzeczy do spakowania / załatwienia (wiza, ubezpieczenie, waluta, SIM, adapter, apteczka itd.)
+- Dopasuj do kierunku i obywatelstwa polskiego podróżnika
+- category: np. Dokumenty, Finanse, Zdrowie, Bagaż, Inne
+
+Plan B — dokładnie ${input.daysCount} alternatywy (po jednej na każdy dzień):
+- reason: krótko (np. deszcz, zmęczenie, zamknięte muzeum)
+- title + description: sensowna alternatywa na ten dzień w tym samym mieście`;
 }
 
 export async function generateTripPlan(

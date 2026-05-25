@@ -291,9 +291,9 @@ export function TripWizard() {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium text-right">{value}</dd>
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="break-words font-medium sm:text-right">{value}</dd>
     </div>
   );
 }

@@ -1,4 +1,9 @@
-import type { Activity, PlanDay, TransportMode } from "@/generated/prisma/client";
+import type {
+  Activity,
+  PlanBAlternative,
+  PlanDay,
+  TransportMode,
+} from "@/generated/prisma/client";
 import { TIME_OF_DAY_ORDER } from "@/lib/labels";
 import type { GeoPoint } from "@/lib/geo/nominatim";
 import {
@@ -13,6 +18,7 @@ export type ActivityWithCoords = Activity & {
 
 export type DayWithRoute = PlanDay & {
   activities: ActivityWithCoords[];
+  planBAlternatives: PlanBAlternative[];
   routeStats: { totalKm: number; totalMin: number; mappedCount: number };
 };
 
@@ -31,7 +37,7 @@ export function activityCoords(activity: Activity): GeoPoint | null {
 }
 
 export function enrichDay(
-  day: PlanDay & { activities: Activity[] },
+  day: PlanDay & { activities: Activity[]; planBAlternatives?: PlanBAlternative[] },
   transport: TransportMode,
 ): DayWithRoute {
   const sorted = sortActivities(day.activities);
@@ -58,6 +64,7 @@ export function enrichDay(
   return {
     ...day,
     activities: withCoords,
+    planBAlternatives: day.planBAlternatives ?? [],
     routeStats: {
       totalKm: Math.round(totalKm * 10) / 10,
       totalMin,

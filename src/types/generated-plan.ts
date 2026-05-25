@@ -13,6 +13,18 @@ export const generatedActivitySchema = z.object({
   isLocalTip: z.boolean(),
 });
 
+export const generatedPlanBSchema = z.object({
+  dayNumber: z.number().int().positive(),
+  reason: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().nullable(),
+});
+
+export const generatedChecklistSchema = z.object({
+  label: z.string().min(1),
+  category: z.string().nullable(),
+});
+
 export const generatedDaySchema = z.object({
   dayNumber: z.number().int().positive(),
   title: z.string().min(1),
@@ -23,6 +35,8 @@ export const generatedDaySchema = z.object({
 export const generatedPlanSchema = z.object({
   countryCode: z.string().length(2).nullable(),
   days: z.array(generatedDaySchema).min(1),
+  checklist: z.array(generatedChecklistSchema).min(6).max(14),
+  planBAlternatives: z.array(generatedPlanBSchema).min(1),
 });
 
 export type GeneratedPlan = z.infer<typeof generatedPlanSchema>;

@@ -28,7 +28,7 @@ export function HeroPreview() {
         </Badge>
       </div>
 
-      <div className="relative mt-5 grid grid-cols-3 gap-2">
+      <div className="relative mt-5 grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
         {[
           { icon: Calendar, label: "5 dni" },
           { icon: MapPin, label: "12 miejsc" },
@@ -39,7 +39,7 @@ export function HeroPreview() {
             className="rounded-xl bg-white/5 px-2 py-2.5 text-center"
           >
             <stat.icon className="mx-auto size-3.5 text-muted-foreground" aria-hidden />
-            <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+            <p className="mt-1 text-xs font-medium text-muted-foreground min-[360px]:text-[10px]">
               {stat.label}
             </p>
           </div>

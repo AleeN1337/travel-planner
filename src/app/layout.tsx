@@ -39,7 +39,8 @@ export default function RootLayout({
   return (
     <html
       lang="pl"
-      className={`${outfit.variable} ${dmSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      data-scroll-behavior="smooth"
+      className={`${outfit.variable} ${dmSans.variable} ${geistMono.variable} dark h-full scroll-pt-24 antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <AppProviders>

@@ -9,7 +9,10 @@ export function SiteFooter() {
           <Compass className="size-4 text-primary" aria-hidden />
           <span>© {new Date().getFullYear()} Planer Podróży</span>
         </div>
-        <nav className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+        <nav className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground sm:gap-6">
+          <Link href="/#funkcje" className="transition-colors hover:text-foreground">
+            Funkcje
+          </Link>
           <Link href="/plan/new" className="transition-colors hover:text-foreground">
             Nowy plan
           </Link>

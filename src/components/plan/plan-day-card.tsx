@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TIME_OF_DAY_LABELS } from "@/lib/labels";
+import { PlanBSection } from "@/components/plan/plan-b-section";
 import type { DayWithRoute } from "@/lib/plans/plan-utils";
 import { travelToNext } from "@/lib/plans/plan-utils";
 import type { TransportMode } from "@/generated/prisma/client";
@@ -111,6 +112,7 @@ export function PlanDayCard({ day, transport }: PlanDayCardProps) {
             </div>
           );
         })}
+        <PlanBSection alternatives={day.planBAlternatives} />
       </CardContent>
     </Card>
   );

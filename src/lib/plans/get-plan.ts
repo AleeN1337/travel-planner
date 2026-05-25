@@ -11,7 +11,14 @@ export async function getTripPlanById(id: string) {
           activities: {
             orderBy: [{ timeOfDay: "asc" }, { orderIndex: "asc" }],
           },
+          planBAlternatives: true,
         },
+      },
+      checklistItems: {
+        orderBy: { orderIndex: "asc" },
+      },
+      weatherSnapshots: {
+        orderBy: { date: "asc" },
       },
     },
   });

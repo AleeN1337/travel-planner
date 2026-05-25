@@ -18,7 +18,7 @@ export function BudgetPanel({ plan }: BudgetPanelProps) {
   const totalMax = plan.totalBudgetMax ?? 0;
 
   return (
-    <section className="glass-card rounded-2xl border-white/10 p-6">
+    <section className="glass-card rounded-2xl border-white/10 p-4 sm:p-6">
       <div className="flex items-center gap-2">
         <Wallet className="size-5 text-primary" aria-hidden />
         <h2 className="font-heading text-lg font-semibold">Budżet podróży</h2>
@@ -42,12 +42,12 @@ export function BudgetPanel({ plan }: BudgetPanelProps) {
             totalMax > 0 ? Math.min(100, Math.round((day.max / totalMax) * 100)) : 0;
           return (
             <li key={day.dayNumber} className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>
+              <div className="flex flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <span className="min-w-0 break-words">
                   Dzień {day.dayNumber}
                   {day.title ? ` · ${day.title}` : ""}
                 </span>
-                <span className="font-medium tabular-nums">
+                <span className="shrink-0 font-medium tabular-nums sm:text-right">
                   {day.min !== day.max ?
                     `${Math.round(day.min)}–${Math.round(day.max)} PLN`
                   : `${Math.round(day.max)} PLN`}

@@ -68,7 +68,7 @@ const steps = [
 
 export default function HomePage() {
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-x-clip">
       {/* Hero */}
       <section className="mesh-hero relative min-h-[calc(100vh-2rem)] pt-28 pb-20 sm:pt-32">
         <div
@@ -142,7 +142,7 @@ export default function HomePage() {
 
           <div className="relative flex justify-center lg:justify-end">
             <div
-              className="animate-pulse-glow pointer-events-none absolute left-1/2 top-1/2 size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"
+              className="animate-pulse-glow pointer-events-none absolute left-1/2 top-1/2 size-[min(420px,90vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"
               aria-hidden
             />
             <HeroPreview />

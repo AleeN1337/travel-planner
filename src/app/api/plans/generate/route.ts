@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { generateTripPlan } from "@/lib/ai/generate-plan";
+import { guestPlanCookieHeader } from "@/lib/plans/claim-guest-plans";
 import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
 import {
   createPlanRecord,
@@ -24,7 +26,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const plan = await createPlanRecord(parsed.data);
+    const session = await auth();
+    const plan = await createPlanRecord(parsed.data, session?.user?.id);
     planId = plan.id;
 
     const generated = await generateTripPlan(parsed.data);
@@ -36,7 +39,11 @@ export async function POST(request: Request) {
       console.error("[plans/generate] geocode:", geoErr);
     }
 
-    return NextResponse.json({ id: plan.id });
+    const response = NextResponse.json({ id: plan.id });
+    if (!session?.user?.id && plan.guestToken) {
+      response.headers.set("Set-Cookie", guestPlanCookieHeader(plan.guestToken));
+    }
+    return response;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Błąd generowania planu";
