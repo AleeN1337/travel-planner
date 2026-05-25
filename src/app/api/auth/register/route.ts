@@ -11,7 +11,13 @@ export async function POST(request: Request) {
     });
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      const isEmailConfig =
+        result.error.includes("EMAIL_SERVER") ||
+        result.error.includes("RESEND_API_KEY");
+      return NextResponse.json(
+        { error: result.error },
+        { status: isEmailConfig ? 503 : 400 },
+      );
     }
 
     return NextResponse.json({

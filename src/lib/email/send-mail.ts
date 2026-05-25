@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { getSanitizedAuthUrl, sanitizeEnvValue } from "@/lib/auth-env";
+import { sanitizeEnvValue } from "@/lib/auth-env";
 
 function getTransport() {
   const server = sanitizeEnvValue(process.env.EMAIL_SERVER);
@@ -14,12 +14,51 @@ function getFromAddress(): string {
   );
 }
 
+function getResendApiKey(): string | undefined {
+  return sanitizeEnvValue(process.env.RESEND_API_KEY);
+}
+
+async function sendViaResend(options: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<void> {
+  const apiKey = getResendApiKey();
+  if (!apiKey) return;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: getFromAddress(),
+      to: [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Resend ${res.status}: ${body || res.statusText}`);
+  }
+}
+
 export async function sendMail(options: {
   to: string;
   subject: string;
   html: string;
   text: string;
 }): Promise<{ sent: boolean; devLink?: string }> {
+  if (getResendApiKey()) {
+    await sendViaResend(options);
+    return { sent: true };
+  }
+
   const transport = getTransport();
 
   if (!transport) {
@@ -29,7 +68,7 @@ export async function sendMail(options: {
       return { sent: false, devLink: options.text };
     }
     throw new Error(
-      "Brak konfiguracji e-mail (EMAIL_SERVER). Ustaw SMTP w .env.",
+      "Brak konfiguracji e-mail (EMAIL_SERVER lub RESEND_API_KEY).",
     );
   }
 
@@ -45,5 +84,5 @@ export async function sendMail(options: {
 }
 
 export function isEmailConfigured(): boolean {
-  return Boolean(sanitizeEnvValue(process.env.EMAIL_SERVER));
+  return Boolean(getResendApiKey() || sanitizeEnvValue(process.env.EMAIL_SERVER));
 }

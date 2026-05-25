@@ -27,7 +27,8 @@ export async function registerUser(
   if (!isEmailConfigured() && process.env.NODE_ENV === "production") {
     return {
       ok: false,
-      error: "Rejestracja e-mail jest tymczasowo niedostępna. Użyj logowania Google.",
+      error:
+        "Wysyłka e-mail nie jest skonfigurowana na serwerze. Administrator musi dodać w Vercel zmienną EMAIL_SERVER (SMTP) lub RESEND_API_KEY, potem Redeploy. Możesz tymczasowo użyć logowania Google.",
     };
   }
 

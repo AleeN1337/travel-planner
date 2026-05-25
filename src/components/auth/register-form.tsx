@@ -50,9 +50,11 @@ export function RegisterForm() {
     return (
       <div className="space-y-4 text-center">
         <p className="text-sm text-primary">{success}</p>
-        <p className="text-sm text-muted-foreground">
-          W trybie deweloperskim link może być w terminalu (`npm run dev`).
-        </p>
+        {process.env.NODE_ENV === "development" && (
+          <p className="text-sm text-muted-foreground">
+            W trybie deweloperskim link może być w terminalu (`npm run dev`).
+          </p>
+        )}
         <Link
           href="/login"
           className="inline-block text-sm font-medium text-primary hover:underline"

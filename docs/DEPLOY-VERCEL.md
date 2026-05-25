@@ -34,8 +34,9 @@ To utworzy tabele (User, TripPlan, Auth itd.) na produkcji.
 | `OPENAI_MODEL` | nie | domyślnie `gpt-4o-mini` |
 | `AUTH_GOOGLE_ID` | dla logowania | Google Cloud Console |
 | `AUTH_GOOGLE_SECRET` | dla logowania | |
-| `EMAIL_SERVER` | dla rejestracji | SMTP, np. `smtp://user:pass@smtp.gmail.com:587` |
-| `EMAIL_FROM` | dla rejestracji | np. `Planer Podróży <noreply@twoja-domena.pl>` |
+| `RESEND_API_KEY` | dla rejestracji (opcja A) | Klucz z [resend.com](https://resend.com/api-keys) — najprostsze na Vercel |
+| `EMAIL_SERVER` | dla rejestracji (opcja B) | SMTP, np. `smtp://user:pass@smtp.gmail.com:587` |
+| `EMAIL_FROM` | dla rejestracji | Resend test: `Planer <onboarding@resend.dev>`; produkcja: zweryfikowana domena |
 | `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | dla mapy | token publiczny Mapbox |
 | `OPENWEATHER_API_KEY` | nie | pogoda opcjonalna |
 
