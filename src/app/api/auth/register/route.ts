@@ -12,8 +12,10 @@ export async function POST(request: Request) {
 
     if (!result.ok) {
       const isEmailConfig =
-        result.error.includes("EMAIL_SERVER") ||
-        result.error.includes("RESEND_API_KEY");
+        result.error.includes("EMAIL_FROM") ||
+        result.error.includes("RESEND") ||
+        result.error.includes("domen") ||
+        result.error.includes("Vercel");
       return NextResponse.json(
         { error: result.error },
         { status: isEmailConfig ? 503 : 400 },

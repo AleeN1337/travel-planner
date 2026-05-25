@@ -1,21 +1,26 @@
 import nodemailer from "nodemailer";
-import { sanitizeEnvValue } from "@/lib/auth-env";
+import {
+  getEmailServer,
+  getFromAddress,
+  getResendApiKey,
+} from "@/lib/email/email-config";
 
 function getTransport() {
-  const server = sanitizeEnvValue(process.env.EMAIL_SERVER);
+  const server = getEmailServer();
   if (!server) return null;
 
   return nodemailer.createTransport(server);
 }
 
-function getFromAddress(): string {
-  return (
-    sanitizeEnvValue(process.env.EMAIL_FROM) ?? "Planer Podróży <onboarding@resend.dev>"
-  );
-}
-
-function getResendApiKey(): string | undefined {
-  return sanitizeEnvValue(process.env.RESEND_API_KEY);
+function parseResendError(status: number, body: string): Error {
+  let detail = body;
+  try {
+    const json = JSON.parse(body) as { message?: string };
+    if (json.message) detail = json.message;
+  } catch {
+    /* raw body */
+  }
+  return new Error(`Resend ${status}: ${detail}`);
 }
 
 async function sendViaResend(options: {
@@ -44,7 +49,7 @@ async function sendViaResend(options: {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`Resend ${res.status}: ${body || res.statusText}`);
+    throw parseResendError(res.status, body);
   }
 }
 
@@ -83,6 +88,10 @@ export async function sendMail(options: {
   return { sent: true };
 }
 
-export function isEmailConfigured(): boolean {
-  return Boolean(getResendApiKey() || sanitizeEnvValue(process.env.EMAIL_SERVER));
-}
+export {
+  getFromAddress,
+  getProductionEmailSetupError,
+  isEmailConfigured,
+  isProductionEmailReady,
+  mapEmailSendError,
+} from "@/lib/email/email-config";

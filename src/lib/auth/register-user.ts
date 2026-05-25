@@ -1,7 +1,10 @@
 import { getDb } from "@/lib/db";
 import { hashPassword, validatePasswordStrength } from "@/lib/auth/password";
 import { createAndSendVerificationEmail } from "@/lib/auth/email-verification";
-import { isEmailConfigured } from "@/lib/email/send-mail";
+import {
+  getProductionEmailSetupError,
+  mapEmailSendError,
+} from "@/lib/email/email-config";
 import { z } from "zod";
 
 export const registerSchema = z.object({
@@ -24,12 +27,9 @@ export async function registerUser(
   const pwdError = validatePasswordStrength(password);
   if (pwdError) return { ok: false, error: pwdError };
 
-  if (!isEmailConfigured() && process.env.NODE_ENV === "production") {
-    return {
-      ok: false,
-      error:
-        "Wysyłka e-mail nie jest skonfigurowana na serwerze. Administrator musi dodać w Vercel zmienną EMAIL_SERVER (SMTP) lub RESEND_API_KEY, potem Redeploy. Możesz tymczasowo użyć logowania Google.",
-    };
+  const emailSetupError = getProductionEmailSetupError();
+  if (emailSetupError) {
+    return { ok: false, error: emailSetupError };
   }
 
   const normalized = email.toLowerCase().trim();
@@ -53,8 +53,9 @@ export async function registerUser(
     try {
       await createAndSendVerificationEmail(normalized, name);
       return { ok: true };
-    } catch {
-      return { ok: false, error: "Nie udało się wysłać e-maila aktywacyjnego." };
+    } catch (err) {
+      console.error("[register] email:", err);
+      return { ok: false, error: mapEmailSendError(err) };
     }
   }
   if (existing?.emailVerified && existing.accounts.length > 0 && !existing.passwordHash) {
@@ -80,10 +81,7 @@ export async function registerUser(
     await createAndSendVerificationEmail(normalized, name);
   } catch (err) {
     console.error("[register] email:", err);
-    return {
-      ok: false,
-      error: "Nie udało się wysłać e-maila aktywacyjnego. Spróbuj później.",
-    };
+    return { ok: false, error: mapEmailSendError(err) };
   }
 
   return { ok: true };

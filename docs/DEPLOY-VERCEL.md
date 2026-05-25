@@ -36,7 +36,7 @@ To utworzy tabele (User, TripPlan, Auth itd.) na produkcji.
 | `AUTH_GOOGLE_SECRET` | dla logowania | |
 | `RESEND_API_KEY` | dla rejestracji (opcja A) | Klucz z [resend.com](https://resend.com/api-keys) — najprostsze na Vercel |
 | `EMAIL_SERVER` | dla rejestracji (opcja B) | SMTP, np. `smtp://user:pass@smtp.gmail.com:587` |
-| `EMAIL_FROM` | dla rejestracji | Resend test: `Planer <onboarding@resend.dev>`; produkcja: zweryfikowana domena |
+| `EMAIL_FROM` | **wymagane** na produkcji | Adres ze **zweryfikowanej domeny** w Resend, np. `Planer <noreply@twoja-domena.pl>` — patrz [EMAIL-PRODUCTION.md](./EMAIL-PRODUCTION.md) |
 | `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | dla mapy | token publiczny Mapbox |
 | `OPENWEATHER_API_KEY` | nie | pogoda opcjonalna |
 
