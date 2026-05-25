@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Planer Podróży (Travel Planner)
 
-## Getting Started
+Spersonalizowany plan podróży: kierunek, dni, styl → plan z mapą, budżetem, checklistą i współpracą grupową.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + TypeScript
+- **Tailwind CSS 4** + **shadcn/ui**
+- **Prisma 7** + PostgreSQL
+- **TanStack Query**, **Zustand**, **Zod**
+- **NextAuth (Auth.js)** — Faza 5
+- **@dnd-kit** — edycja planu (Faza 4)
+
+## Szybki start
 
 ```bash
+# 1. Zależności (już po npm install)
+npm install
+
+# 2. Skopiuj zmienne środowiskowe
+cp .env.example .env
+# Uzupełnij DATABASE_URL (Neon / Supabase / lokalny Postgres)
+
+# 3. Migracja bazy
+npm run db:migrate
+
+# 4. Dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Aplikacja: [http://localhost:3000](http://localhost:3000)  
+Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Struktura projektu
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/              # Strony i API routes
+  components/
+    layout/         # Header, footer
+    ui/             # shadcn
+  generated/prisma/ # Klient Prisma (generowany)
+  lib/              # db, env, auth
+  providers/        # React Query, toasty
+  stores/           # Zustand (kreator)
+  types/            # Zod + typy domenowe
+prisma/
+  schema.prisma     # Model danych
+```
 
-## Learn More
+## Roadmapa
 
-To learn more about Next.js, take a look at the following resources:
+| Faza | Zakres | Status |
+|------|--------|--------|
+| 0 | Szkielet, DB schema, landing | ✅ |
+| 1 | Kreator + generowanie AI | 🔜 |
+| 2 | Mapa, trasa, budżet | |
+| 3 | Pogoda, checklist, PDF | |
+| 4 | Edycja drag-and-drop | |
+| 5 | Auth, moje plany | |
+| 6 | Share, głosowanie, koszty | |
+| 7 | Cache, rate limit, testy | |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Przydatne komendy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev          # serwer deweloperski
+npm run build        # build produkcyjny
+npm run db:studio    # Prisma Studio
+npm run lint         # ESLint
+```
