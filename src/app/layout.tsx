@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AppProviders } from "@/providers/app-providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const outfit = Outfit({
+  variable: "--font-display",
+  subsets: ["latin", "latin-ext"],
+  weight: ["500", "600", "700", "800"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-sans",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
 });
 
 const geistMono = Geist_Mono({
@@ -32,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="pl"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${outfit.variable} ${dmSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <AppProviders>
