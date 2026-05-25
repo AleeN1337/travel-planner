@@ -2,70 +2,71 @@
 
 Spersonalizowany plan podróży: kierunek, dni, styl → plan z mapą, budżetem, checklistą i współpracą grupową.
 
+**Repo:** https://github.com/AleeN1337/travel-planner
+
 ## Stack
 
 - **Next.js 16** (App Router) + TypeScript
 - **Tailwind CSS 4** + **shadcn/ui**
-- **Prisma 7** + PostgreSQL
-- **TanStack Query**, **Zustand**, **Zod**
-- **NextAuth (Auth.js)** — Faza 5
-- **@dnd-kit** — edycja planu (Faza 4)
+- **Prisma 7** + PostgreSQL (Neon)
+- **OpenAI** — generowanie planu
+- **Mapbox** — mapa i trasy
+- **NextAuth (Auth.js)** — Google OAuth
+- **@dnd-kit** — edycja planu
 
-## Szybki start
+## Szybki start (lokalnie)
 
 ```bash
-# 1. Zależności (już po npm install)
 npm install
-
-# 2. Skopiuj zmienne środowiskowe
 cp .env.example .env
-# Uzupełnij DATABASE_URL (Neon / Supabase / lokalny Postgres)
+# Uzupełnij DATABASE_URL, OPENAI_API_KEY, AUTH_*, MAPBOX, opcjonalnie OPENWEATHER
 
-# 3. Migracja bazy
-npm run db:migrate
-
-# 4. Dev server
+npm run db:push    # lub: npm run db:migrate
 npm run dev
 ```
 
-Aplikacja: [http://localhost:3000](http://localhost:3000)  
-Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+- Aplikacja: http://localhost:3000  
+- Health: http://localhost:3000/api/health  
+
+## Wdrożenie (Vercel + Neon — darmowo)
+
+Szczegóły krok po kroku: **[docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md)**
+
+1. Baza **Neon** → `DATABASE_URL` → `npx prisma db push`
+2. Import repozytorium na **Vercel**
+3. Ustaw zmienne z `.env.example` (szczególnie `AUTH_URL` = URL produkcyjny)
+4. Google OAuth: redirect URI na domenę Vercel
 
 ## Struktura projektu
 
 ```
 src/
-  app/              # Strony i API routes
-  components/
-    layout/         # Header, footer
-    ui/             # shadcn
-  generated/prisma/ # Klient Prisma (generowany)
-  lib/              # db, env, auth
-  providers/        # React Query, toasty
-  stores/           # Zustand (kreator)
-  types/            # Zod + typy domenowe
-prisma/
-  schema.prisma     # Model danych
+  app/              # Strony i API
+  components/       # UI, plan, wizard, auth
+  generated/prisma/
+  lib/              # db, AI, mapy, pogoda, PDF
+prisma/schema.prisma
 ```
 
 ## Roadmapa
 
 | Faza | Zakres | Status |
 |------|--------|--------|
-| 0 | Szkielet, DB schema, landing | ✅ |
-| 1 | Kreator + generowanie AI | 🔜 |
-| 2 | Mapa, trasa, budżet | |
-| 3 | Pogoda, checklist, PDF | |
-| 4 | Edycja drag-and-drop | |
-| 5 | Auth, moje plany | |
-| 6 | Share, głosowanie, koszty | |
-| 7 | Cache, rate limit, testy | |
+| 0 | Szkielet, DB, landing | ✅ |
+| 1 | Kreator + AI | ✅ |
+| 2 | Mapa, trasa, budżet | ✅ |
+| 3 | Pogoda, checklista, PDF | ✅ |
+| 4 | Edycja drag-and-drop | ✅ |
+| 5 | Auth Google, moje plany | ✅ |
+| 6 | Share, głosowanie, koszty | 🔜 |
+| 7 | Cache Redis, rate limit, testy | 🔜 |
 
-## Przydatne komendy
+## Komendy
 
 ```bash
-npm run dev          # serwer deweloperski
+npm run dev          # dev server
 npm run build        # build produkcyjny
+npm run db:push      # synchronizacja schematu z DB
 npm run db:studio    # Prisma Studio
-npm run lint         # ESLint
+npm run lint
 ```

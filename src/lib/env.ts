@@ -11,6 +11,8 @@ const envSchema = z.object({
   AUTH_URL: z.string().url().optional(),
   AUTH_GOOGLE_ID: z.string().optional(),
   AUTH_GOOGLE_SECRET: z.string().optional(),
+  EMAIL_SERVER: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

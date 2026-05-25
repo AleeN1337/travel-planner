@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { LogIn } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { auth } from "@/auth";
-import { LoginPanel } from "@/components/auth/login-panel";
+import { RegisterPanel } from "@/components/auth/register-panel";
 import {
   Card,
   CardContent,
@@ -12,41 +12,29 @@ import {
 } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Logowanie",
+  title: "Rejestracja",
 };
 
-type LoginPageProps = {
-  searchParams: Promise<{ callbackUrl?: string; verified?: string; error?: string }>;
-};
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function RegisterPage() {
   const session = await auth();
-  const params = await searchParams;
-
   if (session?.user) {
-    redirect(params.callbackUrl ?? "/dashboard");
+    redirect("/dashboard");
   }
-
-  const redirectTo = params.callbackUrl ?? "/dashboard";
 
   return (
     <div className="mesh-hero flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-28">
       <Card className="glass-card w-full max-w-md border-white/10">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent">
-            <LogIn className="size-6 text-primary-foreground" aria-hidden />
+            <UserPlus className="size-6 text-primary-foreground" aria-hidden />
           </div>
-          <CardTitle className="font-heading text-2xl">Logowanie</CardTitle>
+          <CardTitle className="font-heading text-2xl">Rejestracja</CardTitle>
           <CardDescription>
-            Zaloguj się e-mailem lub przez Google.
+            E-mail z aktywacją lub szybkie konto przez Google.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LoginPanel
-            redirectTo={redirectTo}
-            verified={params.verified === "1"}
-            error={params.error}
-          />
+          <RegisterPanel />
         </CardContent>
       </Card>
     </div>
