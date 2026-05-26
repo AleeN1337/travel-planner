@@ -11,61 +11,37 @@
 npx prisma db push
 ```
 
-To utworzy tabele (User, TripPlan, Auth itd.) na produkcji.
-
 ## 2. Projekt na Vercel
 
 1. Wejdź na [https://vercel.com/new](https://vercel.com/new)
 2. **Import Git Repository** → `AleeN1337/travel-planner`
 3. Framework: **Next.js** (wykryje automatycznie)
-4. **Environment Variables** — dodaj zmienne z `.env` (**tylko wartości**, bez nazwy i cudzysłowów):
-
-   - Źle: `AUTH_URL="https://twoja-app.vercel.app"`
-   - Dobrze: `https://twoja-app.vercel.app`
-
-   Zaznacz **Production** i **Preview** przy każdej zmiennej.
+4. **Environment Variables** — dodaj zmienne z `.env.example` (**tylko wartości**, bez nazwy i cudzysłowów)
 
 | Zmienna | Wymagane | Uwagi |
 |---------|----------|--------|
 | `DATABASE_URL` | tak | Neon connection string |
-| `AUTH_SECRET` | tak | `openssl rand -base64 32` |
-| `AUTH_URL` | tak | `https://TWOJA-DOMENA.vercel.app` (bez slash na końcu) |
 | `OPENAI_API_KEY` | tak | generowanie planów |
 | `OPENAI_MODEL` | nie | domyślnie `gpt-4o-mini` |
-| `AUTH_GOOGLE_ID` | dla logowania | Google Cloud Console |
-| `AUTH_GOOGLE_SECRET` | dla logowania | |
-| `RESEND_API_KEY` | dla rejestracji (opcja A) | Klucz z [resend.com](https://resend.com/api-keys) — najprostsze na Vercel |
-| `EMAIL_SERVER` | dla rejestracji (opcja B) | SMTP, np. `smtp://user:pass@smtp.gmail.com:587` |
-| `EMAIL_FROM` | **wymagane** na produkcji | Adres ze **zweryfikowanej domeny** w Resend, np. `Planer <noreply@twoja-domena.pl>` — patrz [EMAIL-PRODUCTION.md](./EMAIL-PRODUCTION.md) |
 | `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | dla mapy | token publiczny Mapbox |
 | `OPENWEATHER_API_KEY` | nie | pogoda opcjonalna |
 
 5. **Deploy**
 
-Po pierwszym deployu skopiuj URL produkcyjny (np. `https://travel-planner-xxx.vercel.app`) i **zaktualizuj** `AUTH_URL` w Vercel → Settings → Environment Variables → Redeploy.
+## 3. Mapbox
 
-## 3. Google OAuth (produkcja)
+Token z [Mapbox](https://account.mapbox.com/access-tokens/) — ogranicz URL do domeny Vercel (opcjonalnie).
 
-W [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client:
-
-- **Authorized JavaScript origins:** `https://TWOJA-DOMENA.vercel.app`
-- **Authorized redirect URIs:** `https://TWOJA-DOMENA.vercel.app/api/auth/callback/google`
-
-## 4. Mapbox
-
-Token z [Mapbox](https://account.mapbox.com/access-tokens/) — ogranicz URL do domeny Vercel (opcjonalnie, ze względów bezpieczeństwa).
-
-## 5. Weryfikacja
+## 4. Weryfikacja
 
 - `https://TWOJA-DOMENA.vercel.app/api/health` — status OK
-- Landing → kreator → wygeneruj plan
-- Logowanie Google → `/dashboard`
+- Landing → kreator → wygeneruj plan (bez logowania)
 
 ## Limity darmowego planu
 
-- **Vercel Hobby:** ~100 deployów/dzień, funkcje do ~300 s (Fluid Compute)
-- **Neon free:** ograniczony rozmiar bazy i compute — wystarczy na demo i mały ruch
-- **OpenAI / Mapbox:** według własnych limitów konta
+- **Vercel Hobby:** ~100 deployów/dzień
+- **Neon free:** ograniczony rozmiar bazy
+- **OpenAI / Mapbox:** według limitów konta
 
 ## CLI (opcjonalnie)
 

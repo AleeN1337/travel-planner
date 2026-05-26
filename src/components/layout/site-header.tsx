@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Compass, Sparkles } from "lucide-react";
-import { UserNav } from "@/components/auth/user-nav";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,7 +7,6 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/#funkcje", label: "Funkcje" },
   { href: "/plan/new", label: "Nowy plan" },
-  { href: "/dashboard", label: "Moje plany" },
 ] as const;
 
 export function SiteHeader() {
@@ -45,7 +43,6 @@ export function SiteHeader() {
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <MobileNav />
-          <UserNav />
           <Link
             href="/plan/new"
             className={cn(

@@ -16,9 +16,6 @@ export function SiteFooter() {
           <Link href="/plan/new" className="transition-colors hover:text-foreground">
             Nowy plan
           </Link>
-          <Link href="/dashboard" className="transition-colors hover:text-foreground">
-            Moje plany
-          </Link>
         </nav>
         <p className="text-center text-xs text-muted-foreground/80 sm:text-right">
           Plan · mapa · budżet · checklista

@@ -11,15 +11,16 @@ Spersonalizowany plan podróży: kierunek, dni, styl → plan z mapą, budżetem
 - **Prisma 7** + PostgreSQL (Neon)
 - **OpenAI** — generowanie planu
 - **Mapbox** — mapa i trasy
-- **NextAuth (Auth.js)** — Google OAuth
 - **@dnd-kit** — edycja planu
+
+Logowanie i rejestracja są **wyłączone na razie** (Faza 5 — na końcu projektu). Plany działają anonimowo (link + ciasteczko gościa).
 
 ## Szybki start (lokalnie)
 
 ```bash
 npm install
 cp .env.example .env
-# Uzupełnij DATABASE_URL, OPENAI_API_KEY, AUTH_*, MAPBOX, opcjonalnie OPENWEATHER
+# Uzupełnij DATABASE_URL, OPENAI_API_KEY, NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN, opcjonalnie OPENWEATHER
 
 npm run db:push    # lub: npm run db:migrate
 npm run dev
@@ -30,19 +31,18 @@ npm run dev
 
 ## Wdrożenie (Vercel + Neon — darmowo)
 
-Szczegóły krok po kroku: **[docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md)**
+Szczegóły: **[docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md)**
 
 1. Baza **Neon** → `DATABASE_URL` → `npx prisma db push`
 2. Import repozytorium na **Vercel**
-3. Ustaw zmienne z `.env.example` (szczególnie `AUTH_URL` = URL produkcyjny)
-4. Google OAuth: redirect URI na domenę Vercel
+3. Ustaw zmienne z `.env.example`
 
 ## Struktura projektu
 
 ```
 src/
   app/              # Strony i API
-  components/       # UI, plan, wizard, auth
+  components/       # UI, plan, wizard
   generated/prisma/
   lib/              # db, AI, mapy, pogoda, PDF
 prisma/schema.prisma
@@ -57,7 +57,7 @@ prisma/schema.prisma
 | 2 | Mapa, trasa, budżet | ✅ |
 | 3 | Pogoda, checklista, PDF | ✅ |
 | 4 | Edycja drag-and-drop | ✅ |
-| 5 | Auth Google, moje plany | ✅ |
+| 5 | Auth, rejestracja, moje plany | 🔜 (na końcu) |
 | 6 | Share, głosowanie, koszty | 🔜 |
 | 7 | Cache Redis, rate limit, testy | 🔜 |
 

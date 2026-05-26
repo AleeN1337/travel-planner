@@ -10,14 +10,10 @@ import type {
   TravelStyle,
 } from "@/generated/prisma/client";
 
-export async function createPlanRecord(
-  input: TripWizardInput,
-  userId?: string | null,
-) {
+export async function createPlanRecord(input: TripWizardInput) {
   const db = getDb();
   return db.tripPlan.create({
     data: {
-      userId: userId ?? undefined,
       guestToken: randomUUID(),
       destination: input.destination.trim(),
       daysCount: input.daysCount,

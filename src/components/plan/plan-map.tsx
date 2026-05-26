@@ -16,6 +16,7 @@ import {
   MAPBOX_STYLE,
   type LngLat,
 } from "@/lib/geo/mapbox";
+import { PlanDayPicker } from "@/components/plan/plan-day-picker";
 import type { DayWithRoute } from "@/lib/plans/plan-utils";
 import { MAP_CONTAINER_CLASS } from "@/lib/ui/layout-classes";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,23 @@ export function PlanMap({ days, transport, className }: PlanMapProps) {
   const [mapRef, setMapRef] = useState<MapRef | null>(null);
   const [routeGeo, setRouteGeo] = useState<GeoJSON.LineString | null>(null);
 
+  useEffect(() => {
+    if (days.length === 0) return;
+    const exists = days.some((d) => d.dayNumber === selectedDay);
+    if (!exists) setSelectedDay(days[0].dayNumber);
+  }, [days, selectedDay]);
+
   const day = days.find((d) => d.dayNumber === selectedDay) ?? days[0];
+
+  const pickerDays = useMemo(
+    () =>
+      days.map((d) => ({
+        dayNumber: d.dayNumber,
+        title: d.title,
+        mappedCount: d.routeStats.mappedCount,
+      })),
+    [days],
+  );
 
   const markers = useMemo(() => {
     if (!day) return [];
@@ -158,28 +175,11 @@ export function PlanMap({ days, transport, className }: PlanMapProps) {
 
   return (
     <div className={cn("glass-card overflow-hidden rounded-2xl border-white/10", className)}>
-      <div className="flex gap-2 overflow-x-auto border-b border-white/10 p-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {days.map((d) => (
-          <button
-            key={d.dayNumber}
-            type="button"
-            onClick={() => setSelectedDay(d.dayNumber)}
-            className={cn(
-              "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-              selectedDay === d.dayNumber ?
-                "bg-primary/20 text-primary"
-              : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
-            )}
-          >
-            Dzień {d.dayNumber}
-            {d.routeStats.mappedCount > 0 && (
-              <span className="ml-1 text-xs opacity-70">
-                ({d.routeStats.mappedCount})
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <PlanDayPicker
+        days={pickerDays}
+        selectedDay={selectedDay}
+        onSelectDay={setSelectedDay}
+      />
 
       {day && day.routeStats.mappedCount > 0 && (
         <p className="border-b border-white/5 px-4 py-2 text-xs text-muted-foreground">

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { generateTripPlan } from "@/lib/ai/generate-plan";
-import { guestPlanCookieHeader } from "@/lib/plans/claim-guest-plans";
+import { guestPlanCookieHeader } from "@/lib/plans/guest-plan-cookie";
 import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
 import {
   createPlanRecord,
@@ -26,8 +25,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = await auth();
-    const plan = await createPlanRecord(parsed.data, session?.user?.id);
+    const plan = await createPlanRecord(parsed.data);
     planId = plan.id;
 
     const generated = await generateTripPlan(parsed.data);
@@ -40,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const response = NextResponse.json({ id: plan.id });
-    if (!session?.user?.id && plan.guestToken) {
+    if (plan.guestToken) {
       response.headers.set("Set-Cookie", guestPlanCookieHeader(plan.guestToken));
     }
     return response;

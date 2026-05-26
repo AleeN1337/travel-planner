@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogIn, Menu, Sparkles, UserPlus, X } from "lucide-react";
+import { Menu, Sparkles, X } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/#funkcje", label: "Funkcje" },
   { href: "/plan/new", label: "Nowy plan" },
-  { href: "/dashboard", label: "Moje plany" },
 ] as const;
 
 export function MobileNav() {
@@ -75,37 +74,12 @@ export function MobileNav() {
           </Link>
         ))}
 
-        <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
-          <Link
-            href="/login"
-            onClick={() => setOpen(false)}
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "justify-start gap-2 border-white/15",
-            )}
-          >
-            <LogIn className="size-4" aria-hidden />
-            Zaloguj się
-          </Link>
-          <Link
-            href="/register"
-            onClick={() => setOpen(false)}
-            className={cn(
-              buttonVariants(),
-              "justify-start gap-2 bg-gradient-to-r from-primary to-accent",
-            )}
-          >
-            <UserPlus className="size-4" aria-hidden />
-            Rejestracja
-          </Link>
-        </div>
-
         <Link
           href="/plan/new"
           onClick={() => setOpen(false)}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "mt-2 gap-2 border-white/15",
+            "mt-4 gap-2 border-white/15",
           )}
         >
           <Sparkles className="size-4" aria-hidden />
