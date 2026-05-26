@@ -134,6 +134,13 @@ model TripPlan {
   travelStyle    TravelStyle
   paceLevel      PaceLevel
   transportMode  TransportMode
+  travelParty    String?
+  childrenAges   Json?
+  mustSee        String?       @db.Text
+  avoid          String?       @db.Text
+  accommodationArea String?
+  arrivalAirportCode String?
+  arrivalAirportName String?
   variant        PlanVariant   @default(STANDARD)
   totalBudgetMin Float?
   totalBudgetMax Float?

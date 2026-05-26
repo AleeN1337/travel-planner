@@ -23,6 +23,16 @@ export const useWizardStore = create<WizardState>()(
         set((state) => ({ data: { ...state.data, ...partial } })),
       reset: () => set({ step: 0, data: DEFAULT_WIZARD_VALUES }),
     }),
-    { name: "travel-planner-wizard" },
+    {
+      name: "travel-planner-wizard",
+      version: 2,
+      migrate: (persisted) => {
+        const state = persisted as WizardState;
+        return {
+          ...state,
+          data: { ...DEFAULT_WIZARD_VALUES, ...state.data },
+        };
+      },
+    },
   ),
 );

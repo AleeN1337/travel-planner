@@ -6,6 +6,7 @@ import {
   PACE_LABELS,
   STYLE_LABELS,
   TRANSPORT_LABELS,
+  TRAVEL_PARTY_LABELS,
 } from "@/types/trip";
 import {
   generatedPlanSchema,
@@ -18,11 +19,39 @@ function buildPrompt(input: TripWizardInput): string {
       `Data rozpoczęcia: ${input.startDate}.`
     : "Data rozpoczęcia: elastyczna.";
 
+  const party = TRAVEL_PARTY_LABELS[input.travelParty];
+  const children =
+    input.travelParty === "FAMILY" && input.childrenAges?.length ?
+      `Wiek dzieci: ${input.childrenAges.join(", ")} lat.`
+    : "";
+  const airport =
+    input.arrivalAirportCode && input.arrivalAirportName ?
+      `Lotnisko przylotu: ${input.arrivalAirportName} (${input.arrivalAirportCode}) — uwzględnij dojazd z lotniska w pierwszym dniu.`
+    : "";
+  const stay =
+    input.accommodationArea?.trim() ?
+      `Okolica noclegu: ${input.accommodationArea.trim()} — planuj trasy z tego punktu.`
+    : "";
+  const mustSee =
+    input.mustSee?.trim() ?
+      `Must-see (koniecznie uwzględnij): ${input.mustSee.trim()}`
+    : "";
+  const avoid =
+    input.avoid?.trim() ?
+      `Unikaj / nie proponuj: ${input.avoid.trim()}`
+    : "";
+
   return `Jesteś ekspertem od planowania podróży. Stwórz szczegółowy plan wycieczki w języku polskim.
 
 Kierunek: ${input.destination}
 Liczba dni: ${input.daysCount}
 ${start}
+Z kim podróż: ${party}
+${children}
+${airport}
+${stay}
+${mustSee}
+${avoid}
 Budżet: ${BUDGET_LABELS[input.budgetLevel]}
 Styl: ${STYLE_LABELS[input.travelStyle]}
 Tempo: ${PACE_LABELS[input.paceLevel]}

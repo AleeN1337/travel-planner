@@ -22,6 +22,16 @@ export async function createPlanRecord(input: TripWizardInput) {
       travelStyle: input.travelStyle as TravelStyle,
       paceLevel: input.paceLevel as PaceLevel,
       transportMode: input.transportMode as TransportMode,
+      travelParty: input.travelParty,
+      childrenAges:
+        input.childrenAges && input.childrenAges.length > 0 ?
+          input.childrenAges
+        : undefined,
+      mustSee: input.mustSee?.trim() || undefined,
+      avoid: input.avoid?.trim() || undefined,
+      accommodationArea: input.accommodationArea?.trim() || undefined,
+      arrivalAirportCode: input.arrivalAirportCode?.toUpperCase() || undefined,
+      arrivalAirportName: input.arrivalAirportName?.trim() || undefined,
       status: "GENERATING" as PlanStatus,
     },
   });

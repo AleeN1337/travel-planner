@@ -36,6 +36,7 @@ import {
   PACE_LABELS,
   STYLE_LABELS,
   TRANSPORT_LABELS,
+  TRAVEL_PARTY_LABELS,
 } from "@/types/trip";
 import type { TripPlanWithDays } from "@/lib/plans/get-plan";
 import {
@@ -270,6 +271,21 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
               {plan.destination}
             </h1>
             <div className="mt-4 flex flex-wrap gap-2">
+              {plan.arrivalAirportCode && plan.arrivalAirportName && (
+                <Badge variant="outline" className="border-white/15">
+                  ✈ {plan.arrivalAirportName} ({plan.arrivalAirportCode})
+                </Badge>
+              )}
+              {plan.travelParty &&
+                plan.travelParty in TRAVEL_PARTY_LABELS && (
+                  <Badge variant="outline" className="border-white/15">
+                    {
+                      TRAVEL_PARTY_LABELS[
+                        plan.travelParty as keyof typeof TRAVEL_PARTY_LABELS
+                      ]
+                    }
+                  </Badge>
+                )}
               <Badge variant="outline" className="border-white/15">
                 {BUDGET_LABELS[plan.budgetLevel]}
               </Badge>
