@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  START_DATE_PAST_MESSAGE,
+  isPastTripStartDate,
+} from "@/lib/trip/start-date";
 
 export const budgetLevelSchema = z.enum(["LOW", "MEDIUM", "HIGH"]);
 export const travelStyleSchema = z.enum([
@@ -140,6 +144,13 @@ export const tripWizardSchema = z
         code: "custom",
         message: "„Mix” wybierz osobno lub konkretne style",
         path: ["travelStyles"],
+      });
+    }
+    if (data.startDate && isPastTripStartDate(data.startDate)) {
+      ctx.addIssue({
+        code: "custom",
+        message: START_DATE_PAST_MESSAGE,
+        path: ["startDate"],
       });
     }
   });

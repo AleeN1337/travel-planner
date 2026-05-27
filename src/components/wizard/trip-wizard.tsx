@@ -21,6 +21,11 @@ import { OptionChip } from "@/components/wizard/option-chip";
 import { MultiOptionChip } from "@/components/wizard/multi-option-chip";
 import { WizardPreviewCard } from "@/components/wizard/wizard-preview-card";
 import { suggestBudgetRange } from "@/lib/trip/budget-presets";
+import {
+  START_DATE_PAST_MESSAGE,
+  isPastTripStartDate,
+  minStartDateForInput,
+} from "@/lib/trip/start-date";
 import { LegalConsentBlock } from "@/components/legal/legal-consent-block";
 import { WizardCacheCard } from "@/components/wizard/wizard-cache-card";
 import { generatePlanWithStream } from "@/lib/plans/generate-stream";
@@ -197,6 +202,10 @@ export function TripWizard() {
         !data.arrivalAirportCode
       ) {
         toast.error("Wybierz lotnisko przylotu z listy");
+        return false;
+      }
+      if (data.startDate && isPastTripStartDate(data.startDate)) {
+        toast.error(START_DATE_PAST_MESSAGE);
         return false;
       }
     }
@@ -388,12 +397,26 @@ export function TripWizard() {
                 <Input
                   id="startDate"
                   type="date"
+                  min={minStartDateForInput()}
                   value={data.startDate ?? ""}
-                  onChange={(e) =>
-                    updateData({ startDate: e.target.value || undefined })
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) {
+                      updateData({ startDate: undefined });
+                      return;
+                    }
+                    if (isPastTripStartDate(value)) {
+                      toast.error(START_DATE_PAST_MESSAGE);
+                      return;
+                    }
+                    updateData({ startDate: value });
+                  }}
                   className="border-white/15 bg-white/5"
+                  aria-describedby="startDate-hint"
                 />
+                <p id="startDate-hint" className="text-xs text-muted-foreground">
+                  Tylko dziś lub przyszłe daty — przeszłość jest zablokowana
+                </p>
               </div>
             </div>
           </div>

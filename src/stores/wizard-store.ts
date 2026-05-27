@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { isValidTripStartDate } from "@/lib/trip/start-date";
 import {
   DEFAULT_WIZARD_VALUES,
   type TripWizardInput,
@@ -25,7 +26,7 @@ export const useWizardStore = create<WizardState>()(
     }),
     {
       name: "travel-planner-wizard",
-      version: 4,
+      version: 5,
       migrate: (persisted) => {
         const state = persisted as WizardState & {
           data?: TripWizardInput & { travelStyle?: string };
@@ -39,12 +40,18 @@ export const useWizardStore = create<WizardState>()(
             [legacyStyle as TripWizardInput["travelStyles"][number]]
           : DEFAULT_WIZARD_VALUES.travelStyles;
 
+        const startDate =
+          prev.startDate && isValidTripStartDate(prev.startDate) ?
+            prev.startDate
+          : undefined;
+
         return {
           ...state,
           data: {
             ...DEFAULT_WIZARD_VALUES,
             ...prev,
             travelStyles,
+            startDate,
           },
         };
       },
