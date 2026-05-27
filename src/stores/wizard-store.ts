@@ -25,12 +25,27 @@ export const useWizardStore = create<WizardState>()(
     }),
     {
       name: "travel-planner-wizard",
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
-        const state = persisted as WizardState;
+        const state = persisted as WizardState & {
+          data?: TripWizardInput & { travelStyle?: string };
+        };
+        const prev = state.data ?? DEFAULT_WIZARD_VALUES;
+        const legacyStyle = (prev as { travelStyle?: string }).travelStyle;
+        const travelStyles =
+          prev.travelStyles?.length ?
+            prev.travelStyles
+          : legacyStyle ?
+            [legacyStyle as TripWizardInput["travelStyles"][number]]
+          : DEFAULT_WIZARD_VALUES.travelStyles;
+
         return {
           ...state,
-          data: { ...DEFAULT_WIZARD_VALUES, ...state.data },
+          data: {
+            ...DEFAULT_WIZARD_VALUES,
+            ...prev,
+            travelStyles,
+          },
         };
       },
     },

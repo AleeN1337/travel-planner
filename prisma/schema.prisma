@@ -141,6 +141,28 @@ model TripPlan {
   accommodationArea String?
   arrivalAirportCode String?
   arrivalAirportName String?
+  departureAirportCode String?
+  departureAirportName String?
+  adultsCount      Int           @default(2)
+  mobilityNeeds    String?
+  firstTimeVisit   Boolean       @default(true)
+  travelStyles     Json?
+  dietaryNotes     String?       @db.Text
+  foodStandard     String?
+  accommodationType String?
+  quietEvenings    Boolean       @default(false)
+  preferredStartHour Int?
+  stylePriorityNote String?      @db.Text
+  budgetIncludes   Json?
+  maxTravelBetween String?
+  hasTransitPass   Boolean       @default(false)
+  carRental        Boolean       @default(false)
+  lightFirstDay    Boolean       @default(false)
+  tripOccasion     String?
+  weatherPreference String?
+  languageComfort  String?
+  safetyNotes      String?       @db.Text
+  additionalNotes  String?       @db.Text
   variant        PlanVariant   @default(STANDARD)
   totalBudgetMin Float?
   totalBudgetMax Float?

@@ -19,6 +19,18 @@ export function getWizardLocalWarnings(input: TripWizardInput): string[] {
       "Przy rodzinie zwykle lepiej sprawdza się spokojniejsze tempo.",
     );
   }
+  if (input.mobilityNeeds === "LIMITED" && input.paceLevel === "INTENSE") {
+    warnings.push("Przy ograniczonej mobilności lepiej wybrać spokojniejsze tempo.");
+  }
+  if (
+    input.totalBudgetMin != null &&
+    input.totalBudgetMax != null &&
+    input.totalBudgetMax / input.daysCount < 200
+  ) {
+    warnings.push(
+      "Bardzo niski budżet dzienny — plan skupi się na darmowych atrakcjach i tańszym jedzeniu.",
+    );
+  }
 
   return warnings;
 }

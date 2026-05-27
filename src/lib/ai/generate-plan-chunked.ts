@@ -46,7 +46,7 @@ Wymagania:
 - dayNumber musi być dokładnie od ${fromDay} do ${toDay}
 - Każdy dzień: rano (MORNING), popołudnie (AFTERNOON), wieczór (EVENING) — po 1–2 aktywności na porę
 - Konkretne miejsca i nazwy po polsku
-- Koszty costMin/costMax w PLN
+- Koszty costMin/costMax w ${input.currency}
 - Na tym fragmencie planu: 0–1 aktywność z isLocalTip: true
 - Spójność z tempem i budżetem`;
 }

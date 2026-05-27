@@ -11,6 +11,7 @@ type AirportPickerProps = {
   destination: string;
   selectedCode?: string;
   selectedName?: string;
+  label?: string;
   onOptionsLoaded?: (count: number) => void;
   onSelect: (airport: { code: string; name: string } | null) => void;
 };
@@ -35,6 +36,7 @@ export function AirportPicker({
   destination,
   selectedCode,
   selectedName,
+  label = "Wybierz lotnisko przylotu",
   onOptionsLoaded,
   onSelect,
 }: AirportPickerProps) {
@@ -140,7 +142,7 @@ export function AirportPicker({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Wybierz lotnisko przylotu</p>
+      <p className="text-sm font-medium">{label}</p>
       <div className="grid gap-2">
         {sorted.map((airport) => {
           const selected = selectedCode === airport.iataCode;

@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 
 type OptionChipProps<T extends string> = {
   value: T;
-  selected: T;
+  /** Aktualnie wybrana wartość grupy; `null` = żaden chip z grupy nie jest aktywny */
+  selected: T | null;
   label: string;
   onSelect: (value: T) => void;
 };

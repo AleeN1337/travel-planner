@@ -1,67 +1,22 @@
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { TripWizardInput } from "@/types/trip";
-import {
-  BUDGET_LABELS,
-  PACE_LABELS,
-  STYLE_LABELS,
-  TRANSPORT_LABELS,
-  TRAVEL_PARTY_LABELS,
-} from "@/types/trip";
+import { buildTripInputContext } from "@/lib/ai/trip-input-context";
 import {
   generatedPlanSchema,
   type GeneratedPlan,
 } from "@/types/generated-plan";
 
 function buildPrompt(input: TripWizardInput): string {
-  const start =
-    input.startDate ?
-      `Data rozpoczęcia: ${input.startDate}.`
-    : "Data rozpoczęcia: elastyczna.";
-
-  const party = TRAVEL_PARTY_LABELS[input.travelParty];
-  const children =
-    input.travelParty === "FAMILY" && input.childrenAges?.length ?
-      `Wiek dzieci: ${input.childrenAges.join(", ")} lat.`
-    : "";
-  const airport =
-    input.arrivalAirportCode && input.arrivalAirportName ?
-      `Lotnisko przylotu: ${input.arrivalAirportName} (${input.arrivalAirportCode}) — uwzględnij dojazd z lotniska w pierwszym dniu.`
-    : "";
-  const stay =
-    input.accommodationArea?.trim() ?
-      `Okolica noclegu: ${input.accommodationArea.trim()} — planuj trasy z tego punktu.`
-    : "";
-  const mustSee =
-    input.mustSee?.trim() ?
-      `Must-see (koniecznie uwzględnij): ${input.mustSee.trim()}`
-    : "";
-  const avoid =
-    input.avoid?.trim() ?
-      `Unikaj / nie proponuj: ${input.avoid.trim()}`
-    : "";
-
   return `Jesteś ekspertem od planowania podróży. Stwórz szczegółowy plan wycieczki w języku polskim.
 
-Kierunek: ${input.destination}
-Liczba dni: ${input.daysCount}
-${start}
-Z kim podróż: ${party}
-${children}
-${airport}
-${stay}
-${mustSee}
-${avoid}
-Budżet: ${BUDGET_LABELS[input.budgetLevel]}
-Styl: ${STYLE_LABELS[input.travelStyle]}
-Tempo: ${PACE_LABELS[input.paceLevel]}
-Transport: ${TRANSPORT_LABELS[input.transportMode]}
+${buildTripInputContext(input)}
 
 Wymagania:
 - Dokładnie ${input.daysCount} dni (dayNumber od 1 do ${input.daysCount})
 - Każdy dzień: rano (MORNING), popołudnie (AFTERNOON), wieczór (EVENING) — po 1–2 aktywności na porę
 - Konkretne miejsca i nazwy (restauracje, muzea, dzielnice)
-- Koszty costMin/costMax w PLN, realistyczne dla budżetu
+- Koszty costMin/costMax w ${input.currency}, realistyczne dla widełek budżetu
 - 1–2 aktywności z isLocalTip: true (lokalne smaczki) na cały plan
 - Dopasuj intensywność do tempa podróży
 

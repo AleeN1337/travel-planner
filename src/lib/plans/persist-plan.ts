@@ -4,6 +4,7 @@ import type { GeneratedPlan } from "@/types/generated-plan";
 import type { RegenerateDayResult } from "@/lib/ai/regenerate-day";
 import { recalculatePlanBudget } from "@/lib/plans/recalculate-budget";
 import type { TripWizardInput } from "@/types/trip";
+import { primaryTravelStyle } from "@/types/trip";
 import { computeParamsHash } from "@/lib/plans/params-hash";
 import type {
   BudgetLevel,
@@ -23,10 +24,14 @@ export async function createPlanRecord(input: TripWizardInput) {
       daysCount: input.daysCount,
       startDate: input.startDate ? new Date(input.startDate) : null,
       budgetLevel: input.budgetLevel as BudgetLevel,
-      travelStyle: input.travelStyle as TravelStyle,
+      travelStyle: primaryTravelStyle(input.travelStyles) as TravelStyle,
+      travelStyles: input.travelStyles,
       paceLevel: input.paceLevel as PaceLevel,
       transportMode: input.transportMode as TransportMode,
       travelParty: input.travelParty,
+      adultsCount: input.adultsCount,
+      mobilityNeeds: input.mobilityNeeds,
+      firstTimeVisit: input.firstTimeVisit,
       childrenAges:
         input.childrenAges && input.childrenAges.length > 0 ?
           input.childrenAges
@@ -36,6 +41,28 @@ export async function createPlanRecord(input: TripWizardInput) {
       accommodationArea: input.accommodationArea?.trim() || undefined,
       arrivalAirportCode: input.arrivalAirportCode?.toUpperCase() || undefined,
       arrivalAirportName: input.arrivalAirportName?.trim() || undefined,
+      departureAirportCode:
+        input.departureAirportCode?.toUpperCase() || undefined,
+      departureAirportName: input.departureAirportName?.trim() || undefined,
+      totalBudgetMin: input.totalBudgetMin ?? undefined,
+      totalBudgetMax: input.totalBudgetMax ?? undefined,
+      currency: input.currency,
+      budgetIncludes: input.budgetIncludes,
+      dietaryNotes: input.dietaryNotes?.trim() || undefined,
+      foodStandard: input.foodStandard,
+      accommodationType: input.accommodationType,
+      quietEvenings: input.quietEvenings,
+      preferredStartHour: input.preferredStartHour,
+      stylePriorityNote: input.stylePriorityNote?.trim() || undefined,
+      maxTravelBetween: input.maxTravelBetween,
+      hasTransitPass: input.hasTransitPass,
+      carRental: input.carRental,
+      lightFirstDay: input.lightFirstDay,
+      tripOccasion: input.tripOccasion,
+      weatherPreference: input.weatherPreference,
+      languageComfort: input.languageComfort,
+      safetyNotes: input.safetyNotes?.trim() || undefined,
+      additionalNotes: input.additionalNotes?.trim() || undefined,
       variant: (input.planVariant ?? "STANDARD") as PlanVariant,
       paramsHash: computeParamsHash(input),
       status: "GENERATING" as PlanStatus,

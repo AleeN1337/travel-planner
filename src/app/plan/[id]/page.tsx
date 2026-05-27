@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { PlanView } from "@/components/plan/plan-view";
-import { getTripPlanById } from "@/lib/plans/get-plan";
-import { ensureDefaultChecklist } from "@/lib/plans/default-checklist";
-import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
-import { syncWeatherForPlan } from "@/lib/weather/openweather";
+import {
+  getPlanEnrichmentNeeds,
+  planNeedsEnrichment,
+} from "@/lib/plans/enrich-plan";
+import { getCachedTripPlanById } from "@/lib/plans/get-plan-cached";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +26,7 @@ export async function generateMetadata({
   params,
 }: PlanPageProps): Promise<Metadata> {
   const { id } = await params;
-  const plan = await getTripPlanById(id);
+  const plan = await getCachedTripPlanById(id);
   return {
     title: plan ? `Plan: ${plan.destination}` : "Plan podróży",
   };
@@ -33,40 +34,15 @@ export async function generateMetadata({
 
 export default async function PlanPage({ params }: PlanPageProps) {
   const { id } = await params;
-  let plan = await getTripPlanById(id);
+  const plan = await getCachedTripPlanById(id);
 
   if (!plan) {
     notFound();
-  }
-
-  const needsGeocode = plan.days.some((d) =>
-    d.activities.some((a) => a.latitude == null),
-  );
-  if (needsGeocode) {
-    try {
-      await geocodeTripPlan(id);
-      plan = await getTripPlanById(id);
-    } catch {
-      /* mapa bez pinów — plan tekstowy nadal działa */
-    }
-  }
-
-  if (!plan) {
-    notFound();
-  }
-
-  if (plan.status === "READY") {
-    await ensureDefaultChecklist(id);
-    try {
-      await syncWeatherForPlan(id);
-    } catch {
-      /* pogoda opcjonalna */
-    }
-    plan = await getTripPlanById(id);
-    if (!plan) notFound();
   }
 
   const hasWeatherApi = Boolean(process.env.OPENWEATHER_API_KEY);
+  const enrichmentNeeds = getPlanEnrichmentNeeds(plan, hasWeatherApi);
+  const runEnrichment = planNeedsEnrichment(enrichmentNeeds);
 
   return (
     <div className="px-4 py-28 sm:px-6">
@@ -80,7 +56,11 @@ export default async function PlanPage({ params }: PlanPageProps) {
         </Link>
 
         {plan.status === "READY" && plan.days.length > 0 ?
-          <PlanView plan={plan} hasWeatherApi={hasWeatherApi} />
+          <PlanView
+            plan={plan}
+            hasWeatherApi={hasWeatherApi}
+            runEnrichment={runEnrichment}
+          />
         : plan.status === "FAILED" ?
           <Card className="glass-card border-destructive/30">
             <CardHeader>

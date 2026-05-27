@@ -18,18 +18,29 @@ import {
 } from "@/components/ui/card";
 import { AirportPicker } from "@/components/wizard/airport-picker";
 import { OptionChip } from "@/components/wizard/option-chip";
+import { MultiOptionChip } from "@/components/wizard/multi-option-chip";
 import { WizardPreviewCard } from "@/components/wizard/wizard-preview-card";
+import { suggestBudgetRange } from "@/lib/trip/budget-presets";
 import { LegalConsentBlock } from "@/components/legal/legal-consent-block";
 import { WizardCacheCard } from "@/components/wizard/wizard-cache-card";
 import { generatePlanWithStream } from "@/lib/plans/generate-stream";
 import { useWizardStore } from "@/stores/wizard-store";
 import {
+  ACCOMMODATION_TYPE_LABELS,
+  BUDGET_INCLUDE_LABELS,
   BUDGET_LABELS,
+  CURRENCY_LABELS,
+  FOOD_STANDARD_LABELS,
+  LANGUAGE_LABELS,
+  MAX_TRAVEL_LABELS,
+  MOBILITY_LABELS,
   PACE_LABELS,
   PLAN_VARIANT_LABELS,
   STYLE_LABELS,
   TRANSPORT_LABELS,
   TRAVEL_PARTY_LABELS,
+  TRIP_OCCASION_LABELS,
+  WEATHER_PREF_LABELS,
   tripWizardSchema,
   type TripWizardInput,
 } from "@/types/trip";
@@ -37,13 +48,19 @@ import { cn } from "@/lib/utils";
 
 const STEPS = [
   { title: "Gdzie jedziesz?", desc: "Kierunek, dni i lotnisko przylotu" },
-  { title: "Z kim jedziesz?", desc: "Dopasujemy plan do ekipy" },
-  { title: "Preferencje", desc: "Must-see, czego unikać, nocleg" },
-  { title: "Budżet", desc: "Ile chcesz przeznaczyć na wyjazd" },
-  { title: "Styl podróży", desc: "Co Cię najbardziej interesuje" },
-  { title: "Tempo i transport", desc: "Jak chcesz się poruszać" },
+  { title: "Z kim jedziesz?", desc: "Liczba osób, dzieci, mobilność" },
+  { title: "Miejsca i nocleg", desc: "Must-see, czego unikać, okolica" },
+  { title: "Budżet", desc: "Widełki wydatków i co wliczasz" },
+  { title: "Jedzenie i nocleg", desc: "Standard posiłków i zakwaterowania" },
+  { title: "Styl podróży", desc: "Do 3 priorytetów" },
+  { title: "Tempo i transport", desc: "Poruszanie się i logistyka" },
+  { title: "Kontekst wyjazdu", desc: "Okazja, pogoda, język" },
   { title: "Podsumowanie", desc: "Sprawdź i wygeneruj plan" },
 ] as const;
+
+const STYLE_OPTIONS = (
+  Object.keys(STYLE_LABELS) as TripWizardInput["travelStyles"][number][]
+).filter((s) => s !== "MIXED");
 
 export function TripWizard() {
   const router = useRouter();
@@ -60,6 +77,24 @@ export function TripWizard() {
       setDaysDraft(String(data.daysCount));
     }
   }, [step, data.daysCount]);
+
+  useEffect(() => {
+    if (
+      step === 3 &&
+      data.totalBudgetMin == null &&
+      data.totalBudgetMax == null
+    ) {
+      const range = suggestBudgetRange(
+        data.budgetLevel,
+        data.daysCount,
+        data.adultsCount ?? 2,
+      );
+      updateData({
+        totalBudgetMin: range.totalBudgetMin,
+        totalBudgetMax: range.totalBudgetMax,
+      });
+    }
+  }, [step, data.budgetLevel, data.daysCount, data.adultsCount, data.totalBudgetMin, data.totalBudgetMax, updateData]);
 
   const handleAirportOptionsLoaded = useCallback((count: number) => {
     setAirportOptionsCount((prev) => (prev === count ? prev : count));
@@ -166,11 +201,31 @@ export function TripWizard() {
       }
     }
     if (step === 1) {
+      if (data.adultsCount < 1) {
+        toast.error("Podaj liczbę dorosłych (min. 1)");
+        return false;
+      }
       if (
         data.travelParty === "FAMILY" &&
         (!data.childrenAges || data.childrenAges.length === 0)
       ) {
         toast.error("Podaj wiek przynajmniej jednego dziecka");
+        return false;
+      }
+    }
+    if (step === 3) {
+      if (
+        data.totalBudgetMin != null &&
+        data.totalBudgetMax != null &&
+        data.totalBudgetMin > data.totalBudgetMax
+      ) {
+        toast.error("Minimalny budżet nie może być większy od maksymalnego");
+        return false;
+      }
+    }
+    if (step === 5) {
+      if (!data.travelStyles?.length) {
+        toast.error("Wybierz co najmniej jeden styl podróży");
         return false;
       }
     }
@@ -209,6 +264,49 @@ export function TripWizard() {
 
   function setChildrenAges(ages: number[]) {
     updateData({ childrenAges: ages });
+  }
+
+  function applyBudgetPreset(level: TripWizardInput["budgetLevel"]) {
+    const range = suggestBudgetRange(
+      level,
+      data.daysCount,
+      data.adultsCount ?? 2,
+    );
+    updateData({
+      budgetLevel: level,
+      totalBudgetMin: range.totalBudgetMin,
+      totalBudgetMax: range.totalBudgetMax,
+    });
+  }
+
+  function toggleTravelStyle(style: TripWizardInput["travelStyles"][number]) {
+    const current = data.travelStyles ?? ["MIXED"];
+    if (style === "MIXED") {
+      updateData({ travelStyles: ["MIXED"] });
+      return;
+    }
+    const withoutMixed = current.filter((s) => s !== "MIXED");
+    if (withoutMixed.includes(style)) {
+      const next = withoutMixed.filter((s) => s !== style);
+      updateData({ travelStyles: next.length ? next : ["MIXED"] });
+      return;
+    }
+    if (withoutMixed.length >= 3) {
+      toast.error("Możesz wybrać maksymalnie 3 style");
+      return;
+    }
+    updateData({ travelStyles: [...withoutMixed, style] });
+  }
+
+  function toggleBudgetInclude(
+    key: keyof TripWizardInput["budgetIncludes"],
+  ) {
+    updateData({
+      budgetIncludes: {
+        ...data.budgetIncludes,
+        [key]: !data.budgetIncludes[key],
+      },
+    });
   }
 
   return (
@@ -318,11 +416,34 @@ export function TripWizard() {
                       updateData({
                         travelParty: v,
                         childrenAges: v === "FAMILY" ? data.childrenAges : [],
+                        adultsCount:
+                          v === "SOLO" ? 1
+                          : v === "COUPLE" ? 2
+                          : data.adultsCount,
                       })
                     }
                   />
                 ))}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adultsCount">Liczba dorosłych</Label>
+              <Input
+                id="adultsCount"
+                type="number"
+                min={1}
+                max={12}
+                value={data.adultsCount}
+                onChange={(e) =>
+                  updateData({
+                    adultsCount: Math.min(
+                      12,
+                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                    ),
+                  })
+                }
+                className="border-white/15 bg-white/5"
+              />
             </div>
             {data.travelParty === "FAMILY" && (
               <FamilyChildrenAges
@@ -330,6 +451,33 @@ export function TripWizard() {
                 onChange={setChildrenAges}
               />
             )}
+            <div>
+              <p className="mb-2 text-sm font-medium">Mobilność</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(
+                  Object.keys(MOBILITY_LABELS) as TripWizardInput["mobilityNeeds"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.mobilityNeeds}
+                    label={MOBILITY_LABELS[key]}
+                    onSelect={(v) => updateData({ mobilityNeeds: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={data.firstTimeVisit}
+                onChange={(e) =>
+                  updateData({ firstTimeVisit: e.target.checked })
+                }
+                className="size-4 rounded border-white/20"
+              />
+              Pierwsza wizyta w tym miejscu
+            </label>
           </div>
         )}
 
@@ -381,7 +529,7 @@ export function TripWizard() {
         {step === 3 && (
           <div className="space-y-6">
             <div>
-              <p className="mb-2 text-sm font-medium">Poziom wydatków</p>
+              <p className="mb-2 text-sm font-medium">Poziom wydatków (preset)</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 {(
                   Object.keys(BUDGET_LABELS) as TripWizardInput["budgetLevel"][]
@@ -391,8 +539,89 @@ export function TripWizard() {
                     value={key}
                     selected={data.budgetLevel}
                     label={BUDGET_LABELS[key]}
-                    onSelect={(v) => updateData({ budgetLevel: v })}
+                    onSelect={(v) => applyBudgetPreset(v)}
                   />
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="currency">Waluta</Label>
+                <select
+                  id="currency"
+                  value={data.currency}
+                  onChange={(e) =>
+                    updateData({
+                      currency: e.target.value as TripWizardInput["currency"],
+                    })
+                  }
+                  className="h-10 w-full rounded-md border border-white/15 bg-white/5 px-3 text-sm"
+                >
+                  {(
+                    Object.keys(CURRENCY_LABELS) as TripWizardInput["currency"][]
+                  ).map((c) => (
+                    <option key={c} value={c}>
+                      {CURRENCY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalBudgetMin">Budżet min.</Label>
+                <Input
+                  id="totalBudgetMin"
+                  type="number"
+                  min={0}
+                  value={data.totalBudgetMin ?? ""}
+                  onChange={(e) =>
+                    updateData({
+                      totalBudgetMin:
+                        e.target.value === "" ?
+                          undefined
+                        : Number(e.target.value),
+                    })
+                  }
+                  className="border-white/15 bg-white/5"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalBudgetMax">Budżet max.</Label>
+                <Input
+                  id="totalBudgetMax"
+                  type="number"
+                  min={0}
+                  value={data.totalBudgetMax ?? ""}
+                  onChange={(e) =>
+                    updateData({
+                      totalBudgetMax:
+                        e.target.value === "" ?
+                          undefined
+                        : Number(e.target.value),
+                    })
+                  }
+                  className="border-white/15 bg-white/5"
+                />
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Co wliczasz w widełki?</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  Object.keys(BUDGET_INCLUDE_LABELS) as (keyof TripWizardInput["budgetIncludes"])[]
+                ).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleBudgetInclude(key)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                      data.budgetIncludes[key] ?
+                        "border-primary/50 bg-primary/15 text-foreground"
+                      : "border-white/10 bg-white/5 text-muted-foreground",
+                    )}
+                  >
+                    {BUDGET_INCLUDE_LABELS[key]}
+                  </button>
                 ))}
               </div>
             </div>
@@ -411,30 +640,136 @@ export function TripWizard() {
                   />
                 ))}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Ekonomiczny = tańsze opcje · Premium = wyższy standard
-              </p>
             </div>
           </div>
         )}
 
         {step === 4 && (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(Object.keys(STYLE_LABELS) as TripWizardInput["travelStyle"][]).map(
-              (key) => (
-                <OptionChip
-                  key={key}
-                  value={key}
-                  selected={data.travelStyle}
-                  label={STYLE_LABELS[key]}
-                  onSelect={(v) => updateData({ travelStyle: v })}
+          <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-sm font-medium">Standard jedzenia</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(
+                  Object.keys(FOOD_STANDARD_LABELS) as TripWizardInput["foodStandard"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.foodStandard}
+                    label={FOOD_STANDARD_LABELS[key]}
+                    onSelect={(v) => updateData({ foodStandard: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dietaryNotes">Dieta / alergie (opcjonalnie)</Label>
+              <Input
+                id="dietaryNotes"
+                placeholder="np. wegetariańskie, bez glutenu"
+                value={data.dietaryNotes ?? ""}
+                onChange={(e) => updateData({ dietaryNotes: e.target.value })}
+                className="border-white/15 bg-white/5"
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Typ noclegu</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(
+                  Object.keys(
+                    ACCOMMODATION_TYPE_LABELS,
+                  ) as TripWizardInput["accommodationType"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.accommodationType}
+                    label={ACCOMMODATION_TYPE_LABELS[key]}
+                    onSelect={(v) => updateData({ accommodationType: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="preferredStartHour">Start dnia ok.</Label>
+                <Input
+                  id="preferredStartHour"
+                  type="number"
+                  min={7}
+                  max={11}
+                  value={data.preferredStartHour}
+                  onChange={(e) =>
+                    updateData({
+                      preferredStartHour: Math.min(
+                        11,
+                        Math.max(7, Number.parseInt(e.target.value, 10) || 9),
+                      ),
+                    })
+                  }
+                  className="border-white/15 bg-white/5"
                 />
-              ),
-            )}
+              </div>
+              <label className="flex items-end gap-2 pb-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={data.quietEvenings}
+                  onChange={(e) =>
+                    updateData({ quietEvenings: e.target.checked })
+                  }
+                  className="size-4 rounded border-white/20"
+                />
+                Spokojne wieczory (bez klubów po 22:00)
+              </label>
+            </div>
           </div>
         )}
 
         {step === 5 && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Wybierz do 3 priorytetów lub „Mix wszystkiego”.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <OptionChip
+                value="MIXED"
+                selected={
+                  data.travelStyles.length === 1 &&
+                  data.travelStyles[0] === "MIXED" ?
+                    "MIXED"
+                  : null
+                }
+                label={STYLE_LABELS.MIXED}
+                onSelect={() => toggleTravelStyle("MIXED")}
+              />
+              {STYLE_OPTIONS.map((key) => (
+                <MultiOptionChip
+                  key={key}
+                  value={key}
+                  selected={data.travelStyles}
+                  label={STYLE_LABELS[key]}
+                  onToggle={toggleTravelStyle}
+                />
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stylePriorityNote">
+                Priorytet w jednym zdaniu (opcjonalnie)
+              </Label>
+              <Input
+                id="stylePriorityNote"
+                placeholder="np. głównie jedzenie i małe kawiarnie"
+                value={data.stylePriorityNote ?? ""}
+                onChange={(e) =>
+                  updateData({ stylePriorityNote: e.target.value })
+                }
+                className="border-white/15 bg-white/5"
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 6 && (
           <div className="space-y-6">
             <div>
               <p className="mb-2 text-sm font-medium">Tempo</p>
@@ -468,10 +803,147 @@ export function TripWizard() {
                 ))}
               </div>
             </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Dystans między punktami</p>
+              <div className="grid gap-2">
+                {(
+                  Object.keys(MAX_TRAVEL_LABELS) as TripWizardInput["maxTravelBetween"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.maxTravelBetween}
+                    label={MAX_TRAVEL_LABELS[key]}
+                    onSelect={(v) => updateData({ maxTravelBetween: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={data.hasTransitPass}
+                  onChange={(e) =>
+                    updateData({ hasTransitPass: e.target.checked })
+                  }
+                  className="size-4 rounded border-white/20"
+                />
+                Mam bilet/karnet komunikacji
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={data.carRental}
+                  onChange={(e) => updateData({ carRental: e.target.checked })}
+                  className="size-4 rounded border-white/20"
+                />
+                Wynajem auta
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={data.lightFirstDay}
+                  onChange={(e) =>
+                    updateData({ lightFirstDay: e.target.checked })
+                  }
+                  className="size-4 rounded border-white/20"
+                />
+                Lżejszy pierwszy dzień
+              </label>
+            </div>
+            <AirportPicker
+              destination={data.destination}
+              selectedCode={data.departureAirportCode}
+              selectedName={data.departureAirportName}
+              label="Lotnisko wylotu (opcjonalnie)"
+              onSelect={(airport) =>
+                updateData({
+                  departureAirportCode: airport?.code,
+                  departureAirportName: airport?.name,
+                })
+              }
+            />
           </div>
         )}
 
-        {step === 6 && (
+        {step === 7 && (
+          <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-sm font-medium">Okazja</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(
+                  Object.keys(TRIP_OCCASION_LABELS) as TripWizardInput["tripOccasion"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.tripOccasion}
+                    label={TRIP_OCCASION_LABELS[key]}
+                    onSelect={(v) => updateData({ tripOccasion: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Pogoda w planie</p>
+              <div className="grid gap-2">
+                {(
+                  Object.keys(WEATHER_PREF_LABELS) as TripWizardInput["weatherPreference"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.weatherPreference}
+                    label={WEATHER_PREF_LABELS[key]}
+                    onSelect={(v) => updateData({ weatherPreference: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Język / komunikacja</p>
+              <div className="grid gap-2">
+                {(
+                  Object.keys(LANGUAGE_LABELS) as TripWizardInput["languageComfort"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.languageComfort}
+                    label={LANGUAGE_LABELS[key]}
+                    onSelect={(v) => updateData({ languageComfort: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="safetyNotes">Bezpieczeństwo (opcjonalnie)</Label>
+              <Input
+                id="safetyNotes"
+                placeholder="np. wracać przed zmrokiem"
+                value={data.safetyNotes ?? ""}
+                onChange={(e) => updateData({ safetyNotes: e.target.value })}
+                className="border-white/15 bg-white/5"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="additionalNotes">Dodatkowe uwagi dla AI</Label>
+              <textarea
+                id="additionalNotes"
+                rows={3}
+                placeholder="Wszystko, co powinniśmy wiedzieć…"
+                value={data.additionalNotes ?? ""}
+                onChange={(e) =>
+                  updateData({ additionalNotes: e.target.value })
+                }
+                className="w-full rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 8 && (
           <>
           {tripWizardSchema.safeParse(data).success && (
             <WizardCacheCard
@@ -504,7 +976,7 @@ export function TripWizard() {
             )}
             <SummaryRow
               label="Ekipa"
-              value={TRAVEL_PARTY_LABELS[data.travelParty]}
+              value={`${TRAVEL_PARTY_LABELS[data.travelParty]}, ${data.adultsCount} dorosłych`}
             />
             {data.childrenAges && data.childrenAges.length > 0 && (
               <SummaryRow
@@ -512,6 +984,14 @@ export function TripWizard() {
                 value={data.childrenAges.join(", ") + " lat"}
               />
             )}
+            <SummaryRow
+              label="Mobilność"
+              value={MOBILITY_LABELS[data.mobilityNeeds]}
+            />
+            <SummaryRow
+              label="Pierwsza wizyta"
+              value={data.firstTimeVisit ? "tak" : "nie"}
+            />
             {data.mustSee?.trim() && (
               <SummaryRow label="Must-see" value={data.mustSee} />
             )}
@@ -519,18 +999,41 @@ export function TripWizard() {
               <SummaryRow label="Unikaj" value={data.avoid} />
             )}
             {data.accommodationArea?.trim() && (
-              <SummaryRow label="Nocleg" value={data.accommodationArea} />
+              <SummaryRow label="Okolica noclegu" value={data.accommodationArea} />
             )}
-            <SummaryRow label="Budżet" value={BUDGET_LABELS[data.budgetLevel]} />
+            <SummaryRow label="Poziom budżetu" value={BUDGET_LABELS[data.budgetLevel]} />
+            {data.totalBudgetMin != null && data.totalBudgetMax != null && (
+              <SummaryRow
+                label="Widełki"
+                value={`${data.totalBudgetMin}–${data.totalBudgetMax} ${data.currency}`}
+              />
+            )}
             <SummaryRow
               label="Wariant planu"
               value={PLAN_VARIANT_LABELS[data.planVariant ?? "STANDARD"]}
             />
-            <SummaryRow label="Styl" value={STYLE_LABELS[data.travelStyle]} />
+            <SummaryRow
+              label="Styl"
+              value={data.travelStyles
+                .map((s) => STYLE_LABELS[s])
+                .join(", ")}
+            />
+            <SummaryRow
+              label="Jedzenie"
+              value={FOOD_STANDARD_LABELS[data.foodStandard]}
+            />
+            <SummaryRow
+              label="Nocleg (typ)"
+              value={ACCOMMODATION_TYPE_LABELS[data.accommodationType]}
+            />
             <SummaryRow label="Tempo" value={PACE_LABELS[data.paceLevel]} />
             <SummaryRow
               label="Transport"
               value={TRANSPORT_LABELS[data.transportMode]}
+            />
+            <SummaryRow
+              label="Okazja"
+              value={TRIP_OCCASION_LABELS[data.tripOccasion]}
             />
           </dl>
           <LegalConsentBlock
