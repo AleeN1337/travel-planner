@@ -3,7 +3,7 @@
 ## 1. Baza danych (Neon — darmowy tier)
 
 1. Załóż projekt na [https://neon.tech](https://neon.tech)
-2. Skopiuj **Connection string** (PostgreSQL, z `?sslmode=require`)
+2. Skopiuj **Connection string** z Neon; jeśli ma `sslmode=require`, zamień na `sslmode=verify-full` (lub zostaw — aplikacja normalizuje URL automatycznie)
 3. W Neon → **SQL Editor** lub lokalnie:
 
 ```bash
@@ -25,6 +25,9 @@ npx prisma db push
 | `OPENAI_MODEL` | nie | domyślnie `gpt-4o-mini` |
 | `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | dla mapy | token publiczny Mapbox |
 | `OPENWEATHER_API_KEY` | nie | pogoda opcjonalna |
+| `LEGAL_CONTACT_EMAIL` | tak (publicznie) | RODO / regulamin / kontakt |
+| `UPSTASH_REDIS_REST_URL` | zalecane prod | wspólny rate limit między instancjami |
+| `UPSTASH_REDIS_REST_TOKEN` | zalecane prod | para do URL powyżej |
 
 5. **Deploy**
 
@@ -34,8 +37,17 @@ Token z [Mapbox](https://account.mapbox.com/access-tokens/) — ogranicz URL do 
 
 ## 4. Weryfikacja
 
-- `https://TWOJA-DOMENA.vercel.app/api/health` — status OK
+- `https://TWOJA-DOMENA.vercel.app/api/health` — `status: ok`, `rateLimit: "redis"` (gdy Upstash skonfigurowany)
 - Landing → kreator → wygeneruj plan (bez logowania)
+
+## 5. Bezpieczeństwo (wdrożone w aplikacji)
+
+- **Nagłówki HTTP** (CSP, HSTS, `X-Frame-Options`, …) — `src/proxy.ts`
+- **Rate limiting** per IP na API — `src/lib/security/`
+- **Ciasteczko gościa** — `HttpOnly`, `Secure` w produkcji
+- **Limit rozmiaru body** — 512 KB na żądaniach JSON
+
+Na Vercel bez Upstash limit działa tylko w pamięci pojedynczej instancji — dla produkcji dodaj **Upstash Redis**.
 
 ## Limity darmowego planu
 
