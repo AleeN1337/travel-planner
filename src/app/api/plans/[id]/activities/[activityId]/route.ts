@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteActivity, updateActivity } from "@/lib/plans/activity-actions";
+import { enforceRateLimit, guardWriteRequest } from "@/lib/security/api-guard";
 
 const patchSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().optional(),
-  locationName: z.string().optional(),
+  title: z.string().min(1).max(300).optional(),
+  description: z.string().max(2000).optional(),
+  locationName: z.string().max(300).optional(),
   timeOfDay: z.enum(["MORNING", "AFTERNOON", "EVENING"]).optional(),
   costMin: z.number().nonnegative().nullable().optional(),
   costMax: z.number().nonnegative().nullable().optional(),
@@ -17,14 +18,11 @@ type RouteContext = {
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { id, activityId } = await context.params;
-  const parsed = patchSchema.safeParse(await request.json());
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Nieprawidłowe dane" }, { status: 400 });
-  }
+  const guarded = await guardWriteRequest(request, "api", patchSchema);
+  if (!guarded.ok) return guarded.response;
 
   try {
-    const activity = await updateActivity(id, activityId, parsed.data);
+    const activity = await updateActivity(id, activityId, guarded.data);
     return NextResponse.json(activity);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Błąd aktualizacji";
@@ -32,7 +30,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
+  const limited = await enforceRateLimit(request, "api");
+  if (limited) return limited;
+
   const { id, activityId } = await context.params;
 
   try {

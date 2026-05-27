@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { href: "/#polecane", label: "Polecane" },
   { href: "/#funkcje", label: "Funkcje" },
   { href: "/plan/new", label: "Nowy plan" },
 ] as const;

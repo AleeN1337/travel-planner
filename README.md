@@ -20,14 +20,21 @@ Logowanie i rejestracja są **wyłączone na razie** (Faza 5 — na końcu proje
 ```bash
 npm install
 cp .env.example .env
-# Uzupełnij DATABASE_URL, OPENAI_API_KEY, NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN, opcjonalnie OPENWEATHER
+# Uzupełnij DATABASE_URL, OPENAI_API_KEY, NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN, LEGAL_CONTACT_EMAIL
+# Produkcja: UPSTASH_REDIS_* (rate limit), opcjonalnie OPENWEATHER
 
 npm run db:push    # lub: npm run db:migrate
 npm run dev
 ```
 
 - Aplikacja: http://localhost:3000  
-- Health: http://localhost:3000/api/health  
+- Health: http://localhost:3000/api/health (`rateLimit`: `memory` lokalnie, `redis` z Upstash)
+
+## Bezpieczeństwo
+
+- Rate limiting i walidacja rozmiaru body na endpointach API
+- Nagłówki CSP/HSTS w `src/proxy.ts` (Next.js 16)
+- Szczegóły wdrożenia: [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md) §5
 
 ## Wdrożenie (Vercel + Neon — darmowo)
 
@@ -59,7 +66,7 @@ prisma/schema.prisma
 | 4 | Edycja drag-and-drop | ✅ |
 | 5 | Auth, rejestracja, moje plany | 🔜 (na końcu) |
 | 6 | Share, głosowanie, koszty | 🔜 |
-| 7 | Cache Redis, rate limit, testy | 🔜 |
+| 7 | Rate limit, nagłówki bezpieczeństwa, Upstash | ✅ (cache planów: paramsHash) |
 
 ## Komendy
 

@@ -1,11 +1,15 @@
 import { randomUUID } from "crypto";
 import { getDb } from "@/lib/db";
 import type { GeneratedPlan } from "@/types/generated-plan";
+import type { RegenerateDayResult } from "@/lib/ai/regenerate-day";
+import { recalculatePlanBudget } from "@/lib/plans/recalculate-budget";
 import type { TripWizardInput } from "@/types/trip";
+import { computeParamsHash } from "@/lib/plans/params-hash";
 import type {
   BudgetLevel,
   PaceLevel,
   PlanStatus,
+  PlanVariant,
   TransportMode,
   TravelStyle,
 } from "@/generated/prisma/client";
@@ -32,6 +36,8 @@ export async function createPlanRecord(input: TripWizardInput) {
       accommodationArea: input.accommodationArea?.trim() || undefined,
       arrivalAirportCode: input.arrivalAirportCode?.toUpperCase() || undefined,
       arrivalAirportName: input.arrivalAirportName?.trim() || undefined,
+      variant: (input.planVariant ?? "STANDARD") as PlanVariant,
+      paramsHash: computeParamsHash(input),
       status: "GENERATING" as PlanStatus,
     },
   });
@@ -95,7 +101,7 @@ export async function saveGeneratedPlan(
   }
 
   await db.checklistItem.createMany({
-    data: generated.checklist.map((item, i) => ({
+      data: generated.checklist.map((item, i) => ({
       tripPlanId: planId,
       label: item.label,
       category: item.category ?? undefined,
@@ -111,8 +117,78 @@ export async function saveGeneratedPlan(
       totalBudgetMin: totalMin > 0 ? totalMin : null,
       totalBudgetMax: totalMax > 0 ? totalMax : null,
       errorMessage: null,
+      generationProgress: 100,
+      generationStage: "Gotowe",
     },
   });
+}
+
+export async function updateGenerationProgress(
+  planId: string,
+  stage: string,
+  percent: number,
+) {
+  const db = getDb();
+  return db.tripPlan.update({
+    where: { id: planId },
+    data: {
+      generationStage: stage,
+      generationProgress: Math.min(100, Math.max(0, percent)),
+    },
+  });
+}
+
+export async function replacePlanDay(
+  planId: string,
+  result: RegenerateDayResult,
+) {
+  const db = getDb();
+  const { day, planB } = result;
+
+  const planDay = await db.planDay.findFirst({
+    where: { tripPlanId: planId, dayNumber: day.dayNumber },
+  });
+  if (!planDay) {
+    throw new Error("Nie znaleziono dnia w planie");
+  }
+
+  await db.activity.deleteMany({ where: { planDayId: planDay.id } });
+  await db.planBAlternative.deleteMany({ where: { planDayId: planDay.id } });
+
+  await db.planDay.update({
+    where: { id: planDay.id },
+    data: { title: day.title, summary: day.summary },
+  });
+
+  let orderIndex = 0;
+  for (const activity of day.activities) {
+    await db.activity.create({
+      data: {
+        planDayId: planDay.id,
+        timeOfDay: activity.timeOfDay,
+        orderIndex: orderIndex++,
+        title: activity.title,
+        description: activity.description,
+        locationName: activity.locationName ?? undefined,
+        durationMin: activity.durationMin ?? undefined,
+        costMin: activity.costMin ?? undefined,
+        costMax: activity.costMax ?? undefined,
+        category: activity.category ?? undefined,
+        isLocalTip: activity.isLocalTip,
+      },
+    });
+  }
+
+  await db.planBAlternative.create({
+    data: {
+      planDayId: planDay.id,
+      reason: planB.reason,
+      title: planB.title,
+      description: planB.description ?? undefined,
+    },
+  });
+
+  await recalculatePlanBudget(planId);
 }
 
 export async function markPlanFailed(planId: string, message: string) {

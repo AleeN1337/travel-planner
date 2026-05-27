@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { TripWizard } from "@/components/wizard/trip-wizard";
+import { WizardDestinationPrefill } from "@/components/wizard/wizard-destination-prefill";
 
 export const metadata: Metadata = {
   title: "Nowy plan",
@@ -18,6 +20,9 @@ export default function NewPlanPage() {
           <ArrowLeft className="size-4" aria-hidden />
           Strona główna
         </Link>
+        <Suspense fallback={null}>
+          <WizardDestinationPrefill />
+        </Suspense>
         <TripWizard />
       </div>
     </div>

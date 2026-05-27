@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMounted } from "@/hooks/use-mounted";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -29,6 +31,10 @@ import { PlanMapClient } from "@/components/plan/plan-view-client";
 import { ChecklistPanel } from "@/components/plan/checklist-panel";
 import { WeatherPanel } from "@/components/plan/weather-panel";
 import { PlanExportActions } from "@/components/plan/plan-export-actions";
+import { PlanAssistantPanel } from "@/components/plan/plan-assistant-panel";
+import { PlanVariantActions } from "@/components/plan/plan-variant-actions";
+import type { DayRouteInsight } from "@/lib/plans/day-route-analysis";
+import { PLAN_VARIANT_LABELS } from "@/types/trip";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -80,12 +86,32 @@ function buildActivityMap(
 
 export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
   const router = useRouter();
+  const mounted = useMounted();
   const [editing, setEditing] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [containers, setContainers] = useState(() => initContainers(plan));
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const activityMap = useMemo(() => buildActivityMap(plan), [plan]);
+
+  const { data: routeAnalysis } = useQuery({
+    queryKey: ["route-analysis", plan.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/plans/${plan.id}/route-analysis`);
+      if (!res.ok) throw new Error("Analiza trasy niedostępna");
+      return res.json() as Promise<{ days: DayRouteInsight[] }>;
+    },
+    staleTime: 60_000,
+    enabled: mounted,
+  });
+
+  const routeByDay = useMemo(() => {
+    const map = new Map<number, DayRouteInsight>();
+    for (const d of routeAnalysis?.days ?? []) {
+      map.set(d.dayNumber, d);
+    }
+    return map;
+  }, [routeAnalysis]);
 
   useEffect(() => {
     setContainers(initContainers(plan));
@@ -292,6 +318,9 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
               <Badge variant="outline" className="border-white/15">
                 {STYLE_LABELS[plan.travelStyle]}
               </Badge>
+              <Badge variant="outline" className="border-white/15">
+                {PLAN_VARIANT_LABELS[plan.variant]}
+              </Badge>
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
@@ -365,14 +394,11 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
         </div>
 
         <aside className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-span-2 lg:row-start-1">
-          <WeatherPanel
-            snapshots={plan.weatherSnapshots}
-            hasApiKey={hasWeatherApi}
-          />
-          {plan.checklistItems.length > 0 && (
-            <ChecklistPanel planId={plan.id} items={plan.checklistItems} />
-          )}
+          <WeatherPanel plan={plan} hasApiKey={hasWeatherApi} />
+          <ChecklistPanel planId={plan.id} items={plan.checklistItems} />
+          <PlanVariantActions planId={plan.id} currentVariant={plan.variant} />
           <BudgetPanel plan={plan} />
+          <PlanAssistantPanel planId={plan.id} />
           <LocalTipsSection plan={plan} />
         </aside>
 
@@ -389,6 +415,7 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
                 {plan.days.map((day) => (
                   <EditableDayColumn
                     key={day.id}
+                    planId={plan.id}
                     dayId={day.id}
                     dayNumber={day.dayNumber}
                     title={day.title}
@@ -398,6 +425,8 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
                     planBAlternatives={day.planBAlternatives}
                     onDelete={handleDelete}
                     onAdd={handleAdd}
+                    onRegenerated={() => router.refresh()}
+                    routeInsight={routeByDay.get(day.dayNumber)}
                     isSaving={saveState === "saving"}
                   />
                 ))}

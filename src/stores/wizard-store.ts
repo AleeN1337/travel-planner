@@ -25,7 +25,7 @@ export const useWizardStore = create<WizardState>()(
     }),
     {
       name: "travel-planner-wizard",
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
         const state = persisted as WizardState;
         return {

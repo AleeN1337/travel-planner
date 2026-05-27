@@ -43,11 +43,11 @@ export default function RootLayout({
       className={`${outfit.variable} ${dmSans.variable} ${geistMono.variable} dark h-full scroll-pt-24 antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <SiteHeader />
         <AppProviders>
-          <SiteHeader />
           <main className="flex-1">{children}</main>
-          <SiteFooter />
         </AppProviders>
+        <SiteFooter />
       </body>
     </html>
   );

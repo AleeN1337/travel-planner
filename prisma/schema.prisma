@@ -146,8 +146,10 @@ model TripPlan {
   totalBudgetMax Float?
   currency       String        @default("PLN")
   paramsHash     String?
-  status         PlanStatus    @default(DRAFT)
-  errorMessage   String?
+  status              PlanStatus    @default(DRAFT)
+  errorMessage        String?
+  generationProgress  Int?
+  generationStage     String?
 
   days              PlanDay[]
   checklistItems    ChecklistItem[]
@@ -209,13 +211,14 @@ model PlanBAlternative {
 }
 
 model ChecklistItem {
-  id         String   @id @default(cuid())
-  tripPlanId String
-  tripPlan   TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
-  label      String
-  category   String?
-  isChecked  Boolean  @default(false)
-  orderIndex Int      @default(0)
+  id          String   @id @default(cuid())
+  tripPlanId  String
+  tripPlan    TripPlan @relation(fields: [tripPlanId], references: [id], onDelete: Cascade)
+  label       String
+  category    String?
+  resourceUrl String?
+  isChecked   Boolean  @default(false)
+  orderIndex  Int      @default(0)
 }
 
 model WeatherSnapshot {

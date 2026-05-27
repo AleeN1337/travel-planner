@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
@@ -18,10 +18,15 @@ import {
 } from "@/components/ui/card";
 import { AirportPicker } from "@/components/wizard/airport-picker";
 import { OptionChip } from "@/components/wizard/option-chip";
+import { WizardPreviewCard } from "@/components/wizard/wizard-preview-card";
+import { LegalConsentBlock } from "@/components/legal/legal-consent-block";
+import { WizardCacheCard } from "@/components/wizard/wizard-cache-card";
+import { generatePlanWithStream } from "@/lib/plans/generate-stream";
 import { useWizardStore } from "@/stores/wizard-store";
 import {
   BUDGET_LABELS,
   PACE_LABELS,
+  PLAN_VARIANT_LABELS,
   STYLE_LABELS,
   TRANSPORT_LABELS,
   TRAVEL_PARTY_LABELS,
@@ -44,6 +49,17 @@ export function TripWizard() {
   const router = useRouter();
   const { step, data, setStep, updateData, reset } = useWizardStore();
   const [airportOptionsCount, setAirportOptionsCount] = useState(0);
+  const [daysDraft, setDaysDraft] = useState(() => String(data.daysCount));
+  const [genStage, setGenStage] = useState("");
+  const [genPercent, setGenPercent] = useState(0);
+  const [skipCache, setSkipCache] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
+
+  useEffect(() => {
+    if (step === 0) {
+      setDaysDraft(String(data.daysCount));
+    }
+  }, [step, data.daysCount]);
 
   const handleAirportOptionsLoaded = useCallback((count: number) => {
     setAirportOptionsCount((prev) => (prev === count ? prev : count));
@@ -62,26 +78,75 @@ export function TripWizard() {
   const progress = ((step + 1) / STEPS.length) * 100;
 
   const generateMutation = useMutation({
-    mutationFn: async (payload: TripWizardInput) => {
-      const res = await fetch("/api/plans/generate", {
+    mutationFn: async ({
+      payload,
+      useCache,
+    }: {
+      payload: TripWizardInput;
+      useCache: boolean;
+    }) => {
+      setGenStage("Przygotowuję plan…");
+      setGenPercent(5);
+      const id = await generatePlanWithStream(
+        payload,
+        (event) => {
+          if (event.type === "progress") {
+            setGenStage(event.stage);
+            setGenPercent(event.percent);
+          }
+        },
+        { useCache },
+      );
+      return { id };
+    },
+    onSuccess: ({ id }) => {
+      setGenStage("");
+      setGenPercent(0);
+      setSkipCache(false);
+      reset();
+      router.push(`/plan/${id}`);
+    },
+    onError: (err) => {
+      setGenStage("");
+      setGenPercent(0);
+      toast.error(err.message);
+    },
+  });
+
+  const templateMutation = useMutation({
+    mutationFn: async (templatePlanId: string) => {
+      const res = await fetch("/api/plans/from-template", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ templatePlanId, acceptedLegal: true }),
       });
       const json = (await res.json()) as { id?: string; error?: string };
-      if (!res.ok) {
-        throw new Error(json.error ?? "Nie udało się wygenerować planu");
-      }
+      if (!res.ok) throw new Error(json.error ?? "Nie udało się wczytać szablonu");
       return json as { id: string };
     },
     onSuccess: ({ id }) => {
       reset();
       router.push(`/plan/${id}`);
+      toast.success("Plan wczytany z szablonu");
     },
-    onError: (err) => {
-      toast.error(err.message);
-    },
+    onError: (err) => toast.error(err.message),
   });
+
+  function commitDaysCount(showToast = true): boolean {
+    const trimmed = daysDraft.trim();
+    if (trimmed === "") {
+      if (showToast) toast.error("Podaj liczbę dni wyjazdu (1–30)");
+      return false;
+    }
+    const n = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(n) || n < 1 || n > 30) {
+      if (showToast) toast.error("Liczba dni musi być od 1 do 30");
+      return false;
+    }
+    updateData({ daysCount: n });
+    setDaysDraft(String(n));
+    return true;
+  }
 
   function validateStep(): boolean {
     if (step === 0) {
@@ -89,8 +154,7 @@ export function TripWizard() {
         toast.error("Podaj kierunek podróży (min. 2 znaki)");
         return false;
       }
-      if (data.daysCount < 1 || data.daysCount > 30) {
-        toast.error("Liczba dni: od 1 do 30");
+      if (!commitDaysCount()) {
         return false;
       }
       if (
@@ -122,13 +186,25 @@ export function TripWizard() {
     if (step > 0) setStep(step - 1);
   }
 
-  function generate() {
+  function generate(useCache = !skipCache) {
+    if (!legalAccepted) {
+      toast.error("Zaakceptuj regulamin i politykę prywatności");
+      return;
+    }
     const result = tripWizardSchema.safeParse(data);
     if (!result.success) {
       toast.error("Uzupełnij wszystkie pola");
       return;
     }
-    generateMutation.mutate(result.data);
+    generateMutation.mutate({ payload: result.data, useCache });
+  }
+
+  function useTemplate(templatePlanId: string) {
+    if (!legalAccepted) {
+      toast.error("Zaakceptuj regulamin i politykę prywatności");
+      return;
+    }
+    templateMutation.mutate(templatePlanId);
   }
 
   function setChildrenAges(ages: number[]) {
@@ -182,15 +258,32 @@ export function TripWizard() {
                 <Label htmlFor="daysCount">Liczba dni</Label>
                 <Input
                   id="daysCount"
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={data.daysCount}
-                  onChange={(e) =>
-                    updateData({ daysCount: Number(e.target.value) || 1 })
-                  }
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="np. 7"
+                  value={daysDraft}
+                  onChange={(e) => {
+                    const next = e.target.value.replace(/\D/g, "");
+                    setDaysDraft(next);
+                  }}
+                  onBlur={() => {
+                    const trimmed = daysDraft.trim();
+                    if (trimmed === "") return;
+                    const n = Number.parseInt(trimmed, 10);
+                    if (Number.isNaN(n) || n < 1 || n > 30) {
+                      setDaysDraft(String(data.daysCount));
+                      return;
+                    }
+                    updateData({ daysCount: n });
+                    setDaysDraft(String(n));
+                  }}
                   className="border-white/15 bg-white/5"
+                  aria-describedby="daysCount-hint"
                 />
+                <p id="daysCount-hint" className="text-xs text-muted-foreground">
+                  Od 1 do 30 dni — możesz skasować i wpisać od nowa
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="startDate">Data startu (opcjonalnie)</Label>
@@ -286,18 +379,42 @@ export function TripWizard() {
         )}
 
         {step === 3 && (
-          <div className="grid gap-2 sm:grid-cols-3">
-            {(Object.keys(BUDGET_LABELS) as TripWizardInput["budgetLevel"][]).map(
-              (key) => (
-                <OptionChip
-                  key={key}
-                  value={key}
-                  selected={data.budgetLevel}
-                  label={BUDGET_LABELS[key]}
-                  onSelect={(v) => updateData({ budgetLevel: v })}
-                />
-              ),
-            )}
+          <div className="space-y-6">
+            <div>
+              <p className="mb-2 text-sm font-medium">Poziom wydatków</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(
+                  Object.keys(BUDGET_LABELS) as TripWizardInput["budgetLevel"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.budgetLevel}
+                    label={BUDGET_LABELS[key]}
+                    onSelect={(v) => updateData({ budgetLevel: v })}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Wariant planu AI</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(
+                  Object.keys(PLAN_VARIANT_LABELS) as TripWizardInput["planVariant"][]
+                ).map((key) => (
+                  <OptionChip
+                    key={key}
+                    value={key}
+                    selected={data.planVariant ?? "STANDARD"}
+                    label={PLAN_VARIANT_LABELS[key]}
+                    onSelect={(v) => updateData({ planVariant: v })}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Ekonomiczny = tańsze opcje · Premium = wyższy standard
+              </p>
+            </div>
           </div>
         )}
 
@@ -355,6 +472,24 @@ export function TripWizard() {
         )}
 
         {step === 6 && (
+          <>
+          {tripWizardSchema.safeParse(data).success && (
+            <WizardCacheCard
+              data={tripWizardSchema.parse(data)}
+              loading={
+                generateMutation.isPending || templateMutation.isPending
+              }
+              onUseTemplate={useTemplate}
+              onGenerateFresh={() => {
+                setSkipCache(true);
+                generate(false);
+              }}
+            />
+          )}
+          <WizardPreviewCard
+            data={tripWizardSchema.safeParse(data).success ? tripWizardSchema.parse(data) : data}
+            enabled={data.destination.trim().length >= 2}
+          />
           <dl className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
             <SummaryRow label="Kierunek" value={data.destination} />
             {data.arrivalAirportName && data.arrivalAirportCode && (
@@ -387,6 +522,10 @@ export function TripWizard() {
               <SummaryRow label="Nocleg" value={data.accommodationArea} />
             )}
             <SummaryRow label="Budżet" value={BUDGET_LABELS[data.budgetLevel]} />
+            <SummaryRow
+              label="Wariant planu"
+              value={PLAN_VARIANT_LABELS[data.planVariant ?? "STANDARD"]}
+            />
             <SummaryRow label="Styl" value={STYLE_LABELS[data.travelStyle]} />
             <SummaryRow label="Tempo" value={PACE_LABELS[data.paceLevel]} />
             <SummaryRow
@@ -394,6 +533,24 @@ export function TripWizard() {
               value={TRANSPORT_LABELS[data.transportMode]}
             />
           </dl>
+          <LegalConsentBlock
+            checked={legalAccepted}
+            onCheckedChange={setLegalAccepted}
+            disabled={
+              generateMutation.isPending || templateMutation.isPending
+            }
+          />
+          </>
+        )}
+
+        {generateMutation.isPending && (
+          <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-sm font-medium">{genStage || "Generuję plan…"}</p>
+            <Progress value={genPercent || 8} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {genPercent > 0 ? `${genPercent}%` : "To może potrwać do 2 minut"}
+            </p>
+          </div>
         )}
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
@@ -419,17 +576,24 @@ export function TripWizard() {
             </Button>
           : <Button
               type="button"
-              onClick={generate}
-              disabled={generateMutation.isPending}
+              onClick={() => {
+                if (!skipCache) generate(true);
+                else generate(false);
+              }}
+              disabled={
+                !legalAccepted ||
+                generateMutation.isPending ||
+                templateMutation.isPending
+              }
               className={cn(
                 "gap-2 bg-gradient-to-r from-primary to-accent",
-                generateMutation.isPending && "opacity-80",
+                (generateMutation.isPending || !legalAccepted) && "opacity-80",
               )}
             >
               {generateMutation.isPending ?
                 <>
                   <Loader2 className="size-4 animate-spin" aria-hidden />
-                  Generuję plan…
+                  {genStage || "Generuję plan…"}
                 </>
               : <>
                   <Sparkles className="size-4" aria-hidden />

@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ListChecks } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { ExternalLink, ListChecks, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import type { ChecklistItem } from "@/generated/prisma/client";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type ChecklistPanelProps = {
@@ -15,10 +18,31 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [pending, setPending] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const [showAi, setShowAi] = useState(false);
 
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  const refineMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/plans/${planId}/ai/refine-checklist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: notes.trim() }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Błąd AI");
+    },
+    onSuccess: () => {
+      toast.success("Checklista zaktualizowana");
+      setNotes("");
+      setShowAi(false);
+      router.refresh();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   async function toggle(itemId: string, isChecked: boolean) {
     setPending(itemId);
@@ -65,6 +89,48 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
         </span>
       </div>
 
+      {!showAi ?
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3 w-full gap-1.5 border-white/15 text-xs"
+          onClick={() => setShowAi(true)}
+        >
+          <Sparkles className="size-3.5" aria-hidden />
+          Doprecyzuj checklistę (AI)
+        </Button>
+      : <div className="mt-3 space-y-2 rounded-lg border border-primary/25 bg-primary/5 p-3">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="np. paszport UE, lecę Ryanair, nocuję w Airbnb, dziecko 3 lata"
+            rows={3}
+            className="w-full resize-none rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={notes.trim().length < 3 || refineMutation.isPending}
+              onClick={() => refineMutation.mutate()}
+              className="gap-1.5"
+            >
+              {refineMutation.isPending ? "Aktualizuję…" : "Zastosuj"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-white/15"
+              onClick={() => setShowAi(false)}
+            >
+              Anuluj
+            </Button>
+          </div>
+        </div>
+      }
+
       <div className="mt-4 space-y-4">
         {Object.entries(byCategory).map(([category, catItems]) => (
           <div key={category}>
@@ -87,13 +153,27 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
                       onChange={(e) => toggle(item.id, e.target.checked)}
                       className="mt-0.5 size-4 rounded border-white/20 accent-primary"
                     />
-                    <span
-                      className={cn(
-                        "text-sm",
-                        item.isChecked && "line-through",
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          "text-sm",
+                          item.isChecked && "line-through",
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                      {item.resourceUrl && (
+                        <a
+                          href={item.resourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="size-3" aria-hidden />
+                          Więcej informacji
+                        </a>
                       )}
-                    >
-                      {item.label}
                     </span>
                   </label>
                 </li>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { z } from "zod";
+import { guardWriteRequest } from "@/lib/security/api-guard";
 
 const bodySchema = z.object({
   isChecked: z.boolean(),
@@ -10,11 +11,8 @@ type RouteContext = { params: Promise<{ id: string; itemId: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { id, itemId } = await context.params;
-  const body = bodySchema.safeParse(await request.json());
-
-  if (!body.success) {
-    return NextResponse.json({ error: "Nieprawidłowe dane" }, { status: 400 });
-  }
+  const guarded = await guardWriteRequest(request, "api", bodySchema);
+  if (!guarded.ok) return guarded.response;
 
   const db = getDb();
   const item = await db.checklistItem.findFirst({
@@ -27,7 +25,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const updated = await db.checklistItem.update({
     where: { id: itemId },
-    data: { isChecked: body.data.isChecked },
+    data: { isChecked: guarded.data.isChecked },
   });
 
   return NextResponse.json(updated);

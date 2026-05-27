@@ -14,6 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AddActivityForm } from "@/components/plan/add-activity-form";
+import { RegenerateDayButton } from "@/components/plan/regenerate-day-button";
+import { DayRouteBadge } from "@/components/plan/day-route-badge";
+import type { DayRouteInsight } from "@/lib/plans/day-route-analysis";
 import { PlanBSection } from "@/components/plan/plan-b-section";
 import { SortableActivity } from "@/components/plan/sortable-activity";
 import type { ActivityWithCoords } from "@/lib/plans/plan-utils";
@@ -21,6 +24,7 @@ import type { PlanBAlternative, TimeOfDay } from "@/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
 type EditableDayColumnProps = {
+  planId: string;
   dayId: string;
   dayNumber: number;
   title: string | null;
@@ -36,10 +40,13 @@ type EditableDayColumnProps = {
     locationName?: string;
     timeOfDay: TimeOfDay;
   }) => Promise<void>;
+  onRegenerated: () => void;
+  routeInsight?: DayRouteInsight;
   isSaving: boolean;
 };
 
 export function EditableDayColumn({
+  planId,
   dayId,
   dayNumber,
   title,
@@ -49,6 +56,8 @@ export function EditableDayColumn({
   planBAlternatives,
   onDelete,
   onAdd,
+  onRegenerated,
+  routeInsight,
   isSaving,
 }: EditableDayColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: dayId });
@@ -68,6 +77,20 @@ export function EditableDayColumn({
         <CardTitle className="font-heading text-xl">{title}</CardTitle>
         {summary && (
           <CardDescription className="text-base">{summary}</CardDescription>
+        )}
+        <RegenerateDayButton
+          planId={planId}
+          dayNumber={dayNumber}
+          onDone={onRegenerated}
+          disabled={isSaving}
+        />
+        {routeInsight && (
+          <DayRouteBadge
+            planId={planId}
+            insight={routeInsight}
+            onOptimized={onRegenerated}
+            disabled={isSaving}
+          />
         )}
       </CardHeader>
       <CardContent className="pt-6">
@@ -96,7 +119,12 @@ export function EditableDayColumn({
             })}
           </div>
         </SortableContext>
-        <AddActivityForm planDayId={dayId} onAdd={onAdd} disabled={isSaving} />
+        <AddActivityForm
+          planId={planId}
+          planDayId={dayId}
+          onAdd={onAdd}
+          disabled={isSaving}
+        />
         <PlanBSection alternatives={planBAlternatives} />
       </CardContent>
     </Card>

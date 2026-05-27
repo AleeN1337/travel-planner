@@ -10,6 +10,7 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import { FeaturedDestinationsSection } from "@/components/landing/featured-destinations-section";
 import { HeroPreview } from "@/components/landing/hero-preview";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,6 +156,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <FeaturedDestinationsSection />
 
       {/* How it works */}
       <section className="relative border-y border-white/5 bg-background py-20 sm:py-24">

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useMounted } from "@/hooks/use-mounted";
 import { Loader2, Plane } from "lucide-react";
 import type { SuggestedAirport } from "@/types/airport";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,8 @@ export function AirportPicker({
   onSelect,
 }: AirportPickerProps) {
   const trimmed = destination.trim();
-  const enabled = trimmed.length >= 3;
+  const mounted = useMounted();
+  const enabled = mounted && trimmed.length >= 3;
 
   const { data: airports, isLoading, isError, error } = useQuery({
     queryKey: ["trip-airports", trimmed],

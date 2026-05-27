@@ -17,6 +17,8 @@ export const transportModeSchema = z.enum([
   "MIXED",
 ]);
 
+export const planVariantSchema = z.enum(["BUDGET", "STANDARD", "PREMIUM"]);
+
 export const travelPartySchema = z.enum([
   "SOLO",
   "COUPLE",
@@ -40,6 +42,7 @@ export const tripWizardSchema = z.object({
   travelStyle: travelStyleSchema,
   paceLevel: paceLevelSchema,
   transportMode: transportModeSchema,
+  planVariant: planVariantSchema.default("STANDARD"),
 });
 
 export type TripWizardInput = z.infer<typeof tripWizardSchema>;
@@ -86,6 +89,15 @@ export const TRAVEL_PARTY_LABELS: Record<
   GROUP: "Grupa (3+ osób)",
 };
 
+export const PLAN_VARIANT_LABELS: Record<
+  TripWizardInput["planVariant"],
+  string
+> = {
+  BUDGET: "Ekonomiczny",
+  STANDARD: "Standard",
+  PREMIUM: "Premium",
+};
+
 export const DEFAULT_WIZARD_VALUES: TripWizardInput = {
   destination: "",
   daysCount: 3,
@@ -95,4 +107,5 @@ export const DEFAULT_WIZARD_VALUES: TripWizardInput = {
   travelStyle: "MIXED",
   paceLevel: "BALANCED",
   transportMode: "MIXED",
+  planVariant: "STANDARD",
 };
