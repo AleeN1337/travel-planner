@@ -73,7 +73,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="mesh-hero relative min-h-[calc(100vh-2rem)] pt-28 pb-20 sm:pt-32">
         <div
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,oklch(0.12_0.025_265)_85%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,oklch(0.12_0.025_265/0.5)_90%)]"
           aria-hidden
         />
 
@@ -160,7 +160,7 @@ export default function HomePage() {
       <FeaturedDestinationsSection />
 
       {/* How it works */}
-      <section className="relative border-y border-white/5 bg-background py-20 sm:py-24">
+      <section className="section-soft relative border-y border-white/5 py-20 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <p className="text-center text-sm font-medium uppercase tracking-widest text-primary">
             Jak to działa

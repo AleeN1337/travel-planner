@@ -12,7 +12,7 @@ export function FeaturedDestinationsSection() {
   return (
     <section
       id="polecane"
-      className="relative border-y border-white/5 bg-background py-20 sm:py-24"
+      className="section-soft relative border-y border-white/5 py-20 sm:py-24"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl">
