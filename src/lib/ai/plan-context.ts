@@ -91,6 +91,7 @@ ${day.summary ? `Podsumowanie: ${day.summary}\n` : ""}${acts || "  (brak aktywno
 export function planToWizardInput(plan: TripPlanWithDays): TripWizardInput {
   const defaults = DEFAULT_WIZARD_VALUES;
   return {
+    organizerName: plan.organizerName?.trim() || defaults.organizerName || "Organizator",
     destination: plan.destination,
     daysCount: plan.daysCount,
     startDate: plan.startDate?.toISOString().slice(0, 10),

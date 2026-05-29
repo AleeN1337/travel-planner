@@ -8,7 +8,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TIME_OF_DAY_LABELS } from "@/lib/labels";
+import { ActivityComments } from "@/components/plan/activity-comments";
 import { PlanBSection } from "@/components/plan/plan-b-section";
+import { PlanBVotingSection } from "@/components/plan/plan-b-voting-section";
+import type { ActivityCommentDto, PlanBVoteSummaryDto } from "@/lib/plans/collaboration/types";
 import type { DayWithRoute } from "@/lib/plans/plan-utils";
 import { travelToNext } from "@/lib/plans/plan-utils";
 import type { TransportMode } from "@/generated/prisma/client";
@@ -22,9 +25,22 @@ const TIME_ICONS = {
 type PlanDayCardProps = {
   day: DayWithRoute;
   transport: TransportMode;
+  planId?: string;
+  commentsByActivityId?: Record<string, ActivityCommentDto[]>;
+  planBVotes?: PlanBVoteSummaryDto[];
+  hasMember?: boolean;
+  onCollaborationChange?: () => void;
 };
 
-export function PlanDayCard({ day, transport }: PlanDayCardProps) {
+export function PlanDayCard({
+  day,
+  transport,
+  planId,
+  commentsByActivityId,
+  planBVotes,
+  hasMember = false,
+  onCollaborationChange,
+}: PlanDayCardProps) {
   return (
     <Card className="glass-card overflow-hidden border-white/10">
       <CardHeader className="border-b border-white/5 bg-white/[0.02]">
@@ -102,6 +118,15 @@ export function PlanDayCard({ day, transport }: PlanDayCardProps) {
                     </span>
                   )}
                 </div>
+                {planId && onCollaborationChange && (
+                  <ActivityComments
+                    planId={planId}
+                    activityId={activity.id}
+                    comments={commentsByActivityId?.[activity.id] ?? []}
+                    hasMember={hasMember}
+                    onChanged={onCollaborationChange}
+                  />
+                )}
               </div>
               {leg && (
                 <div className="flex items-center gap-2 py-2 pl-4 text-xs text-muted-foreground">
@@ -112,7 +137,15 @@ export function PlanDayCard({ day, transport }: PlanDayCardProps) {
             </div>
           );
         })}
-        <PlanBSection alternatives={day.planBAlternatives} />
+        {planId && onCollaborationChange ?
+          <PlanBVotingSection
+            planId={planId}
+            alternatives={day.planBAlternatives}
+            voteSummaries={planBVotes ?? []}
+            hasMember={hasMember}
+            onChanged={onCollaborationChange}
+          />
+        : <PlanBSection alternatives={day.planBAlternatives} />}
       </CardContent>
     </Card>
   );

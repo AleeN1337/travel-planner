@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { generateTripPlanWithProgress } from "@/lib/ai/generate-plan-chunked";
-import { guestPlanCookieHeader } from "@/lib/plans/guest-plan-cookie";
+import {
+  appendOwnerSessionCookies,
+  setupOwnerSession,
+} from "@/lib/plans/apply-owner-cookies";
 import { geocodeTripPlan } from "@/lib/plans/geocode-plan";
 import { cloneTripPlan, findCachedTemplate } from "@/lib/plans/clone-plan";
 import { computeParamsHash } from "@/lib/plans/params-hash";
@@ -67,16 +70,21 @@ export async function POST(request: Request) {
 
     const cached = await tryLoadFromCache(parsed.data, useCache);
     if (cached) {
+      const session = await setupOwnerSession(
+        cached.id,
+        parsed.data.organizerName,
+        cached.guestToken,
+      );
       const response = NextResponse.json({
         id: cached.id,
         fromCache: true,
       });
-      if (cached.guestToken) {
-        response.headers.set(
-          "Set-Cookie",
-          guestPlanCookieHeader(cached.guestToken),
-        );
-      }
+      appendOwnerSessionCookies(
+        response.headers,
+        cached.id,
+        session.guestToken,
+        session.participantToken,
+      );
       if (wantsStream) {
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
@@ -98,13 +106,16 @@ export async function POST(request: Request) {
             controller.close();
           },
         });
-        const headers: HeadersInit = {
+        const headers = new Headers({
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache, no-transform",
-        };
-        if (cached.guestToken) {
-          headers["Set-Cookie"] = guestPlanCookieHeader(cached.guestToken);
-        }
+        });
+        appendOwnerSessionCookies(
+          headers,
+          cached.id,
+          session.guestToken,
+          session.participantToken,
+        );
         return new Response(stream, { headers });
       }
       return response;
@@ -112,6 +123,11 @@ export async function POST(request: Request) {
 
     const plan = await createPlanRecord(parsed.data);
     planId = plan.id;
+    const session = await setupOwnerSession(
+      plan.id,
+      parsed.data.organizerName,
+      plan.guestToken,
+    );
 
     if (!wantsStream) {
       const generated = await generateTripPlanWithProgress(
@@ -128,12 +144,12 @@ export async function POST(request: Request) {
       }
 
       const response = NextResponse.json({ id: plan.id });
-      if (plan.guestToken) {
-        response.headers.set(
-          "Set-Cookie",
-          guestPlanCookieHeader(plan.guestToken),
-        );
-      }
+      appendOwnerSessionCookies(
+        response.headers,
+        plan.id,
+        session.guestToken,
+        session.participantToken,
+      );
       return response;
     }
 
@@ -177,15 +193,9 @@ export async function POST(request: Request) {
             console.error("[plans/generate] geocode:", geoErr);
           }
 
-          const donePayload: {
-            type: "done";
-            id: string;
-            setCookie?: string;
-          } = { type: "done", id: plan.id };
-          if (plan.guestToken) {
-            donePayload.setCookie = guestPlanCookieHeader(plan.guestToken);
-          }
-          controller.enqueue(encoder.encode(sseLine(donePayload)));
+          controller.enqueue(
+            encoder.encode(sseLine({ type: "done", id: plan.id })),
+          );
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Błąd generowania planu";
@@ -201,14 +211,17 @@ export async function POST(request: Request) {
       },
     });
 
-    const headers: HeadersInit = {
+    const headers = new Headers({
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
-    };
-    if (plan.guestToken) {
-      headers["Set-Cookie"] = guestPlanCookieHeader(plan.guestToken);
-    }
+    });
+    appendOwnerSessionCookies(
+      headers,
+      plan.id,
+      session.guestToken,
+      session.participantToken,
+    );
 
     return new Response(stream, { headers });
   } catch (error) {

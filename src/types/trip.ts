@@ -87,11 +87,16 @@ export const languageComfortSchema = z.enum([
 
 export const tripWizardSchema = z
   .object({
+    organizerName: z
+      .string()
+      .min(1, "Podaj swoje imię jako organizatora")
+      .max(40),
     destination: z.string().min(2, "Podaj kierunek podróży"),
     daysCount: z.coerce.number().int().min(1).max(30),
     startDate: z.string().optional(),
     arrivalAirportCode: z.string().length(3).optional(),
     arrivalAirportName: z.string().min(1).optional(),
+    departureCity: z.string().max(120).optional(),
     departureAirportCode: z.string().length(3).optional(),
     departureAirportName: z.string().min(1).optional(),
     travelParty: travelPartySchema,
@@ -311,7 +316,9 @@ export const DEFAULT_BUDGET_INCLUDES: TripWizardInput["budgetIncludes"] = {
 };
 
 export const DEFAULT_WIZARD_VALUES: TripWizardInput = {
+  organizerName: "",
   destination: "",
+  departureCity: "",
   daysCount: 3,
   travelParty: "COUPLE",
   adultsCount: 2,

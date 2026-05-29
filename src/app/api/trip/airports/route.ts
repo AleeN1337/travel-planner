@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { suggestAirportsForDestination } from "@/lib/ai/suggest-airports";
+import { suggestAirports } from "@/lib/ai/suggest-airports";
 import { guardWriteRequest } from "@/lib/security/api-guard";
 
 const bodySchema = z.object({
   destination: z.string().min(2).max(200),
+  purpose: z.enum(["arrival", "departure"]).optional(),
+  tripDestination: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
@@ -12,7 +14,12 @@ export async function POST(request: Request) {
     const guarded = await guardWriteRequest(request, "tripAi", bodySchema);
     if (!guarded.ok) return guarded.response;
 
-    const result = await suggestAirportsForDestination(guarded.data.destination);
+    const purpose = guarded.data.purpose ?? "arrival";
+    const result = await suggestAirports(
+      guarded.data.destination,
+      purpose,
+      guarded.data.tripDestination,
+    );
     const sorted = [...result.airports].sort(
       (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
     );
@@ -20,6 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       destination: result.destination,
       airports: sorted,
+      purpose,
     });
   } catch (error) {
     const message =

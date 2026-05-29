@@ -7,8 +7,12 @@ import { Loader2, Plane } from "lucide-react";
 import type { SuggestedAirport } from "@/types/airport";
 import { cn } from "@/lib/utils";
 
+export type AirportSearchPurpose = "arrival" | "departure";
+
 type AirportPickerProps = {
-  destination: string;
+  searchQuery: string;
+  purpose?: AirportSearchPurpose;
+  tripDestination?: string;
   selectedCode?: string;
   selectedName?: string;
   label?: string;
@@ -16,48 +20,68 @@ type AirportPickerProps = {
   onSelect: (airport: { code: string; name: string } | null) => void;
 };
 
-async function fetchAirports(destination: string) {
+async function fetchAirports(
+  searchQuery: string,
+  purpose: AirportSearchPurpose,
+  tripDestination?: string,
+) {
   const res = await fetch("/api/trip/airports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ destination }),
+    body: JSON.stringify({
+      destination: searchQuery,
+      purpose,
+      tripDestination:
+        purpose === "arrival" ? tripDestination : undefined,
+    }),
   });
   const json = (await res.json()) as {
     airports?: SuggestedAirport[];
+    destination?: string;
     error?: string;
   };
   if (!res.ok) {
     throw new Error(json.error ?? "Nie udało się pobrać lotnisk");
   }
-  return json.airports ?? [];
+  return {
+    airports: json.airports ?? [],
+    correctedName: json.destination,
+  };
 }
 
 export function AirportPicker({
-  destination,
+  searchQuery,
+  purpose = "arrival",
+  tripDestination,
   selectedCode,
   selectedName,
-  label = "Wybierz lotnisko przylotu",
+  label,
   onOptionsLoaded,
   onSelect,
 }: AirportPickerProps) {
-  const trimmed = destination.trim();
+  const trimmed = searchQuery.trim();
   const mounted = useMounted();
-  const enabled = mounted && trimmed.length >= 3;
+  const enabled = mounted && trimmed.length >= 2;
 
-  const { data: airports, isLoading, isError, error } = useQuery({
-    queryKey: ["trip-airports", trimmed],
-    queryFn: () => fetchAirports(trimmed),
+  const defaultLabel =
+    purpose === "departure" ?
+      "Wybierz lotnisko wylotu"
+    : "Wybierz lotnisko przylotu";
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["trip-airports", purpose, trimmed, tripDestination ?? ""],
+    queryFn: () => fetchAirports(trimmed, purpose, tripDestination),
     enabled,
     staleTime: 10 * 60 * 1000,
     retry: 1,
   });
 
   const sorted = useMemo(() => {
-    if (!airports) return [];
-    return [...airports].sort(
+    if (!data?.airports) return [];
+    return [...data.airports].sort(
       (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
     );
-  }, [airports]);
+  }, [data?.airports]);
 
   const onSelectRef = useRef(onSelect);
   const onOptionsLoadedRef = useRef(onOptionsLoaded);
@@ -87,7 +111,9 @@ export function AirportPicker({
   if (!enabled) {
     return (
       <p className="text-xs text-muted-foreground">
-        Wpisz kierunek (min. 3 znaki), aby zobaczyć lotniska w okolicy.
+        {purpose === "departure" ?
+          "Wpisz miasto wylotu (min. 2 znaki), np. Warszawa — AI poprawi literówki."
+        : "Wpisz kierunek (min. 2 znaki), aby zobaczyć lotniska w okolicy."}
       </p>
     );
   }
@@ -96,7 +122,7 @@ export function AirportPicker({
     return (
       <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
-        Szukam lotnisk w okolicy…
+        Szukam lotnisk (AI poprawia nazwę miejsca)…
       </div>
     );
   }
@@ -117,32 +143,44 @@ export function AirportPicker({
     );
   }
 
+  const correctedHint =
+    data?.correctedName &&
+    data.correctedName.toLowerCase() !== trimmed.toLowerCase() ?
+      <p className="text-xs text-primary/90">
+        AI rozumie lokalizację jako: <strong>{data.correctedName}</strong>
+      </p>
+    : null;
+
   if (sorted.length === 1) {
     const airport = sorted[0];
     return (
-      <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
-        <p className="mb-1 flex items-center gap-2 text-xs font-medium text-primary">
-          <Plane className="size-3.5" aria-hidden />
-          Lotnisko w tym kierunku
-        </p>
-        <p className="font-medium">
-          {airport.name}{" "}
-          <span className="font-mono text-sm text-muted-foreground">
-            ({airport.iataCode})
-          </span>
-        </p>
-        {airport.distanceHint && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {airport.distanceHint}
+      <div className="space-y-2">
+        {correctedHint}
+        <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
+          <p className="mb-1 flex items-center gap-2 text-xs font-medium text-primary">
+            <Plane className="size-3.5" aria-hidden />
+            {purpose === "departure" ? "Lotnisko wylotu" : "Lotnisko w tym kierunku"}
           </p>
-        )}
+          <p className="font-medium">
+            {airport.name}{" "}
+            <span className="font-mono text-sm text-muted-foreground">
+              ({airport.iataCode})
+            </span>
+          </p>
+          {airport.distanceHint && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {airport.distanceHint}
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
+      {correctedHint}
+      <p className="text-sm font-medium">{label ?? defaultLabel}</p>
       <div className="grid gap-2">
         {sorted.map((airport) => {
           const selected = selectedCode === airport.iataCode;
@@ -183,7 +221,7 @@ export function AirportPicker({
       </div>
       {!selectedCode && (
         <p className="text-xs text-amber-400/90">
-          Wybierz lotnisko, aby dopasować dojazd do centrum.
+          Wybierz lotnisko, aby dopasować trasę.
         </p>
       )}
       {selectedCode && selectedName && (

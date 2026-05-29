@@ -58,7 +58,7 @@ const STEPS = [
   { title: "Budżet", desc: "Widełki wydatków i co wliczasz" },
   { title: "Jedzenie i nocleg", desc: "Standard posiłków i zakwaterowania" },
   { title: "Styl podróży", desc: "Do 3 priorytetów" },
-  { title: "Tempo i transport", desc: "Poruszanie się i logistyka" },
+  { title: "Tempo i transport", desc: "Poruszanie się, lotnisko wylotu" },
   { title: "Kontekst wyjazdu", desc: "Okazja, pogoda, język" },
   { title: "Podsumowanie", desc: "Sprawdź i wygeneruj plan" },
 ] as const;
@@ -190,6 +190,10 @@ export function TripWizard() {
 
   function validateStep(): boolean {
     if (step === 0) {
+      if (data.organizerName.trim().length < 1) {
+        toast.error("Podaj swoje imię jako organizatora");
+        return false;
+      }
       if (data.destination.trim().length < 2) {
         toast.error("Podaj kierunek podróży (min. 2 znaki)");
         return false;
@@ -338,6 +342,22 @@ export function TripWizard() {
         {step === 0 && (
           <div className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="organizerName">Twoje imię (organizator planu)</Label>
+              <Input
+                id="organizerName"
+                placeholder="np. Anna"
+                value={data.organizerName}
+                onChange={(e) =>
+                  updateData({ organizerName: e.target.value })
+                }
+                maxLength={40}
+                className="border-white/15 bg-white/5"
+              />
+              <p className="text-xs text-muted-foreground">
+                Goście z linkiem zaproszenia podadzą imię osobno po wejściu do planu.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="destination">Kierunek podróży</Label>
               <Input
                 id="destination"
@@ -354,7 +374,9 @@ export function TripWizard() {
               />
             </div>
             <AirportPicker
-              destination={data.destination}
+              searchQuery={data.destination}
+              purpose="arrival"
+              tripDestination={data.destination}
               selectedCode={data.arrivalAirportCode}
               selectedName={data.arrivalAirportName}
               onOptionsLoaded={handleAirportOptionsLoaded}
@@ -875,18 +897,37 @@ export function TripWizard() {
                 Lżejszy pierwszy dzień
               </label>
             </div>
-            <AirportPicker
-              destination={data.destination}
-              selectedCode={data.departureAirportCode}
-              selectedName={data.departureAirportName}
-              label="Lotnisko wylotu (opcjonalnie)"
-              onSelect={(airport) =>
-                updateData({
-                  departureAirportCode: airport?.code,
-                  departureAirportName: airport?.name,
-                })
-              }
-            />
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <Label htmlFor="departureCity">Miasto wylotu (Polska)</Label>
+              <Input
+                id="departureCity"
+                placeholder="np. Warszawa, Kraków, Gdańsk"
+                value={data.departureCity ?? ""}
+                onChange={(e) =>
+                  updateData({
+                    departureCity: e.target.value,
+                    departureAirportCode: undefined,
+                    departureAirportName: undefined,
+                  })
+                }
+                className="border-white/15 bg-white/5"
+              />
+              <p className="text-xs text-muted-foreground">
+                AI poprawi literówki i zaproponuje lotniska wylotu — pole opcjonalne.
+              </p>
+              <AirportPicker
+                searchQuery={data.departureCity ?? ""}
+                purpose="departure"
+                selectedCode={data.departureAirportCode}
+                selectedName={data.departureAirportName}
+                onSelect={(airport) =>
+                  updateData({
+                    departureAirportCode: airport?.code,
+                    departureAirportName: airport?.name,
+                  })
+                }
+              />
+            </div>
           </div>
         )}
 
@@ -986,6 +1027,7 @@ export function TripWizard() {
             enabled={data.destination.trim().length >= 2}
           />
           <dl className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
+            <SummaryRow label="Organizator" value={data.organizerName} />
             <SummaryRow label="Kierunek" value={data.destination} />
             {data.arrivalAirportName && data.arrivalAirportCode && (
               <SummaryRow

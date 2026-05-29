@@ -3,6 +3,7 @@ import { z } from "zod";
 import { refineChecklistWithAI } from "@/lib/ai/refine-checklist";
 import { getTripPlanById } from "@/lib/plans/get-plan";
 import { replacePlanChecklist } from "@/lib/plans/replace-checklist";
+import { ensurePlanWrite } from "@/lib/plans/plan-access-response";
 import { guardWriteRequest } from "@/lib/security/api-guard";
 
 const bodySchema = z.object({
@@ -15,6 +16,9 @@ export const maxDuration = 60;
 
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
+  const access = await ensurePlanWrite(id);
+  if (!access.ok) return access.response;
+
   const guarded = await guardWriteRequest(request, "ai", bodySchema);
   if (!guarded.ok) return guarded.response;
 

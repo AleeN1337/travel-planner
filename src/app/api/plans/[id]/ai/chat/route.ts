@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { askPlanAssistant } from "@/lib/ai/plan-assistant";
 import { getTripPlanById } from "@/lib/plans/get-plan";
-import { assertPlanAccess } from "@/lib/plans/plan-access";
+import { ensurePlanWrite } from "@/lib/plans/plan-access-response";
 import { guardWriteRequest } from "@/lib/security/api-guard";
 
 const bodySchema = z.object({
@@ -23,16 +23,11 @@ export const maxDuration = 60;
 
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
+  const access = await ensurePlanWrite(id);
+  if (!access.ok) return access.response;
 
   const guarded = await guardWriteRequest(request, "ai", bodySchema);
   if (!guarded.ok) return guarded.response;
-
-  try {
-    await assertPlanAccess(id);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Brak dostępu";
-    return NextResponse.json({ error: msg }, { status: 403 });
-  }
 
   const plan = await getTripPlanById(id);
   if (!plan) {

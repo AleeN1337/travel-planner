@@ -20,6 +20,7 @@ export async function createPlanRecord(input: TripWizardInput) {
   return db.tripPlan.create({
     data: {
       guestToken: randomUUID(),
+      organizerName: input.organizerName.trim(),
       destination: input.destination.trim(),
       daysCount: input.daysCount,
       startDate: input.startDate ? new Date(input.startDate) : null,

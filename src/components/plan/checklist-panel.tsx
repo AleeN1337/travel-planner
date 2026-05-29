@@ -7,14 +7,24 @@ import { ExternalLink, ListChecks, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { ChecklistItem } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
+import { ParticipantSelect } from "@/components/ui/readable-select";
 import { cn } from "@/lib/utils";
 
 type ChecklistPanelProps = {
   planId: string;
   items: ChecklistItem[];
+  readOnly?: boolean;
+  participantNames?: string[];
+  canAssign?: boolean;
 };
 
-export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelProps) {
+export function ChecklistPanel({
+  planId,
+  items: initialItems,
+  readOnly = false,
+  participantNames = [],
+  canAssign = false,
+}: ChecklistPanelProps) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [pending, setPending] = useState<string | null>(null);
@@ -44,6 +54,28 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
     onError: (e) => toast.error(e.message),
   });
 
+  async function assign(itemId: string, assignedTo: string | null) {
+    setPending(itemId);
+    setItems((prev) =>
+      prev.map((i) => (i.id === itemId ? { ...i, assignedTo } : i)),
+    );
+    try {
+      const res = await fetch(`/api/plans/${planId}/checklist/${itemId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignedTo }),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      setItems(initialItems);
+      toast.error("Nie udało się przypisać");
+    } finally {
+      setPending(null);
+    }
+  }
+
   async function toggle(itemId: string, isChecked: boolean) {
     setPending(itemId);
     setItems((prev) =>
@@ -53,6 +85,7 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
     try {
       const res = await fetch(`/api/plans/${planId}/checklist/${itemId}`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isChecked }),
       });
@@ -89,7 +122,7 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
         </span>
       </div>
 
-      {!showAi ?
+      {!readOnly && !showAi ?
         <Button
           type="button"
           variant="outline"
@@ -100,7 +133,8 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
           <Sparkles className="size-3.5" aria-hidden />
           Doprecyzuj checklistę (AI)
         </Button>
-      : <div className="mt-3 space-y-2 rounded-lg border border-primary/25 bg-primary/5 p-3">
+      : !readOnly && showAi ?
+        <div className="mt-3 space-y-2 rounded-lg border border-primary/25 bg-primary/5 p-3">
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -129,7 +163,7 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
             </Button>
           </div>
         </div>
-      }
+      : null}
 
       <div className="mt-4 space-y-4">
         {Object.entries(byCategory).map(([category, catItems]) => (
@@ -142,14 +176,15 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
                 <li key={item.id}>
                   <label
                     className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-white/5",
+                      "flex items-start gap-3 rounded-lg px-2 py-2 transition-colors",
+                      !readOnly && "cursor-pointer hover:bg-white/5",
                       item.isChecked && "opacity-60",
                     )}
                   >
                     <input
                       type="checkbox"
                       checked={item.isChecked}
-                      disabled={pending === item.id}
+                      disabled={readOnly || pending === item.id}
                       onChange={(e) => toggle(item.id, e.target.checked)}
                       className="mt-0.5 size-4 rounded border-white/20 accent-primary"
                     />
@@ -174,6 +209,30 @@ export function ChecklistPanel({ planId, items: initialItems }: ChecklistPanelPr
                           Więcej informacji
                         </a>
                       )}
+                      {canAssign && participantNames.length > 0 ?
+                        <div
+                          className="mt-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ParticipantSelect
+                            label="Przypisana osoba"
+                            value={item.assignedTo}
+                            disabled={pending === item.id}
+                            participants={participantNames}
+                            emptyLabel="Nie przypisano"
+                            onChange={(next) => {
+                              if (next !== (item.assignedTo ?? null)) {
+                                void assign(item.id, next);
+                              }
+                            }}
+                          />
+                        </div>
+                      : canAssign ?
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Dodaj uczestników (link + imię), aby przypisywać
+                          zadania.
+                        </p>
+                      : null}
                     </span>
                   </label>
                 </li>

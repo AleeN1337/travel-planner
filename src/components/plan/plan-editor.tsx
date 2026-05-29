@@ -32,7 +32,16 @@ import { ChecklistPanel } from "@/components/plan/checklist-panel";
 import { WeatherPanel } from "@/components/plan/weather-panel";
 import { PlanExportActions } from "@/components/plan/plan-export-actions";
 import { PlanAssistantPanel } from "@/components/plan/plan-assistant-panel";
+import { PlanCollaborationPanel } from "@/components/plan/plan-collaboration-panel";
+import { PlanParticipantBanner } from "@/components/plan/plan-participant-banner";
+import { PlanParticipantsPanel } from "@/components/plan/plan-participants-panel";
+import { PlanSharePanel } from "@/components/plan/plan-share-panel";
+import { usePlanCollaboration } from "@/hooks/use-plan-collaboration";
 import { PlanVariantActions } from "@/components/plan/plan-variant-actions";
+import {
+  canWritePlan,
+  type PlanAccessRole,
+} from "@/lib/plans/plan-access-types";
 import type { DayRouteInsight } from "@/lib/plans/day-route-analysis";
 import { PLAN_VARIANT_LABELS } from "@/types/trip";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +65,7 @@ import { cn } from "@/lib/utils";
 type PlanEditorProps = {
   plan: TripPlanWithDays;
   hasWeatherApi: boolean;
+  accessRole: PlanAccessRole;
 };
 
 function initContainers(plan: TripPlanWithDays): Record<string, string[]> {
@@ -84,10 +94,36 @@ function buildActivityMap(
   return map;
 }
 
-export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
+export function PlanEditor({ plan, hasWeatherApi, accessRole }: PlanEditorProps) {
   const router = useRouter();
   const mounted = useMounted();
-  const [editing, setEditing] = useState(true);
+  const canWrite = canWritePlan(accessRole);
+  const isOwner = accessRole === "owner";
+  const [editing, setEditing] = useState(canWrite);
+  const {
+    data: collaboration,
+    invalidate: refreshCollaboration,
+  } = usePlanCollaboration(plan.id, mounted);
+  const hasMember = Boolean(collaboration?.member.name);
+  const canActInGroup = hasMember || isOwner;
+  const memberName = collaboration?.member.name ?? null;
+
+  useEffect(() => {
+    if (!mounted || !isOwner || hasMember) return;
+    void fetch(`/api/plans/${plan.id}/participant/sync`, {
+      method: "POST",
+      credentials: "include",
+    }).then((res) => {
+      if (res.ok) refreshCollaboration();
+    });
+  }, [mounted, isOwner, hasMember, plan.id, refreshCollaboration]);
+  const participantNames =
+    collaboration?.participants.map((p) => p.displayName) ?? [];
+  const needsGuestJoin = !isOwner && !hasMember;
+  const dayOptions = plan.days.map((d) => ({
+    id: d.id,
+    label: `Dzień ${d.dayNumber}${d.title ? `: ${d.title}` : ""}`,
+  }));
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [containers, setContainers] = useState(() => initContainers(plan));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -287,12 +323,33 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
 
   return (
     <div className="space-y-8">
+      {needsGuestJoin && (
+        <PlanParticipantBanner
+          planId={plan.id}
+          destination={plan.destination}
+          onJoined={() => {
+            refreshCollaboration();
+            router.refresh();
+          }}
+        />
+      )}
+
+      {collaboration && collaboration.participants.length > 0 && (
+        <PlanParticipantsPanel participants={collaboration.participants} />
+      )}
+
       <header className="glass-card rounded-3xl border-white/10 p-4 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium uppercase tracking-widest text-primary">
-              Twój plan podróży
+              {isOwner ? "Twój plan podróży" : "Plan udostępniony"}
             </p>
+            {memberName && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isOwner ? "Organizator" : "Uczestnik"}:{" "}
+                <strong className="text-foreground">{memberName}</strong>
+              </p>
+            )}
             <h1 className="font-heading mt-1 break-words text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
               {plan.destination}
             </h1>
@@ -331,32 +388,42 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
               {saveState === "saved" && (
                 <span className="text-xs text-primary">Zapisano</span>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setEditing((e) => !e)}
-                className="gap-1.5 border-white/15"
-              >
-                {editing ?
-                  <>
-                    <Eye className="size-3.5" aria-hidden />
-                    Podgląd
-                  </>
-                : <>
-                    <Pencil className="size-3.5" aria-hidden />
-                    Edytuj
-                  </>
-                }
-              </Button>
+              {canWrite && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing((e) => !e)}
+                  className="gap-1.5 border-white/15"
+                >
+                  {editing ?
+                    <>
+                      <Eye className="size-3.5" aria-hidden />
+                      Podgląd
+                    </>
+                  : <>
+                      <Pencil className="size-3.5" aria-hidden />
+                      Edytuj
+                    </>
+                  }
+                </Button>
+              )}
             </div>
-            <PlanExportActions planId={plan.id} />
-            <Link
-              href="/plan/new"
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-white/15")}
-            >
-              Nowy plan
-            </Link>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              {isOwner && <PlanSharePanel planId={plan.id} />}
+              <PlanExportActions planId={plan.id} />
+            </div>
+            {isOwner && (
+              <Link
+                href="/plan/new"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  "border-white/15",
+                )}
+              >
+                Nowy plan
+              </Link>
+            )}
           </div>
         </div>
 
@@ -378,9 +445,15 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
           )}
         </div>
 
-        {editing && (
+        {canWrite && editing && (
           <p className="mt-4 text-sm text-muted-foreground">
             Przeciągnij punkty między dniami · zmiany zapisują się automatycznie
+          </p>
+        )}
+        {!canWrite && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Masz dostęp tylko do podglądu — edycja wymaga linku z uprawnieniem do
+            edycji od organizatora.
           </p>
         )}
       </header>
@@ -395,15 +468,35 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
 
         <aside className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-span-2 lg:row-start-1">
           <WeatherPanel plan={plan} hasApiKey={hasWeatherApi} />
-          <ChecklistPanel planId={plan.id} items={plan.checklistItems} />
-          <PlanVariantActions planId={plan.id} currentVariant={plan.variant} />
+          {collaboration && (
+            <PlanCollaborationPanel
+              planId={plan.id}
+              isOwner={isOwner}
+              canActInGroup={canActInGroup}
+              memberName={memberName}
+              participantNames={participantNames}
+              data={collaboration}
+              dayOptions={dayOptions}
+              onChanged={refreshCollaboration}
+            />
+          )}
+          <ChecklistPanel
+            planId={plan.id}
+            items={plan.checklistItems}
+            readOnly={!canWrite}
+            participantNames={participantNames}
+            canAssign={hasMember}
+          />
+          {isOwner && (
+            <PlanVariantActions planId={plan.id} currentVariant={plan.variant} />
+          )}
           <BudgetPanel plan={plan} />
-          <PlanAssistantPanel planId={plan.id} />
+          {canWrite && <PlanAssistantPanel planId={plan.id} />}
           <LocalTipsSection plan={plan} />
         </aside>
 
         <div className="space-y-6 lg:col-span-3 lg:col-start-1 lg:row-start-2">
-          {editing ?
+          {canWrite && editing ?
             <DndContext
               sensors={sensors}
               collisionDetection={closestCorners}
@@ -428,6 +521,10 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
                     onRegenerated={() => router.refresh()}
                     routeInsight={routeByDay.get(day.dayNumber)}
                     isSaving={saveState === "saving"}
+                    commentsByActivityId={collaboration?.commentsByActivityId}
+                    planBVotes={collaboration?.planBVotes}
+                    hasMember={canActInGroup}
+                    onCollaborationChange={refreshCollaboration}
                   />
                 ))}
               </div>
@@ -445,6 +542,11 @@ export function PlanEditor({ plan, hasWeatherApi }: PlanEditorProps) {
                   key={day.id}
                   day={day}
                   transport={plan.transportMode}
+                  planId={plan.id}
+                  commentsByActivityId={collaboration?.commentsByActivityId}
+                  planBVotes={collaboration?.planBVotes}
+                  hasMember={canActInGroup}
+                  onCollaborationChange={refreshCollaboration}
                 />
               ))}
             </div>

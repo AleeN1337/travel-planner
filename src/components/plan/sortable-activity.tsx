@@ -5,6 +5,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, MapPin, Sparkles, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ActivityComments } from "@/components/plan/activity-comments";
+import type { ActivityCommentDto } from "@/lib/plans/collaboration/types";
 import type { ActivityWithCoords } from "@/lib/plans/plan-utils";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +15,10 @@ type SortableActivityProps = {
   index: number;
   onDelete: (id: string) => void;
   isSaving: boolean;
+  planId?: string;
+  comments?: ActivityCommentDto[];
+  hasMember?: boolean;
+  onCollaborationChange?: () => void;
 };
 
 export function SortableActivity({
@@ -20,6 +26,10 @@ export function SortableActivity({
   index,
   onDelete,
   isSaving,
+  planId,
+  comments,
+  hasMember,
+  onCollaborationChange,
 }: SortableActivityProps) {
   const {
     attributes,
@@ -102,6 +112,15 @@ export function SortableActivity({
               </span>
             )}
           </div>
+          {planId && onCollaborationChange && (
+            <ActivityComments
+              planId={planId}
+              activityId={activity.id}
+              comments={comments ?? []}
+              hasMember={Boolean(hasMember)}
+              onChanged={onCollaborationChange}
+            />
+          )}
         </div>
       </div>
     </div>

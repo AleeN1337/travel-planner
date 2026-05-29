@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ReadableSelect } from "@/components/ui/readable-select";
 import { TIME_OF_DAY_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import type { TimeOfDay } from "@/generated/prisma/client";
@@ -161,21 +162,15 @@ export function AddActivityForm({
             rows={2}
             className="w-full resize-none rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm"
           />
-          <div className="space-y-2">
-            <Label htmlFor={`ai-time-${planDayId}`}>Pora (opcjonalnie)</Label>
-            <select
-              id={`ai-time-${planDayId}`}
-              value={timeOfDay}
-              onChange={(e) => setTimeOfDay(e.target.value as TimeOfDay)}
-              className="h-8 w-full rounded-lg border border-white/15 bg-white/5 px-2.5 text-sm"
-            >
-              {(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map((t) => (
-                <option key={t} value={t}>
-                  {TIME_OF_DAY_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ReadableSelect
+            id={`ai-time-${planDayId}`}
+            label="Pora (opcjonalnie)"
+            value={timeOfDay}
+            onChange={(v) => setTimeOfDay(v as TimeOfDay)}
+            options={(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map(
+              (t) => ({ value: t, label: TIME_OF_DAY_LABELS[t] }),
+            )}
+          />
           <Button
             type="button"
             size="sm"
@@ -229,23 +224,15 @@ export function AddActivityForm({
               className="border-white/15 bg-white/5"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={`time-${planDayId}`}>Pora dnia</Label>
-            <select
-              id={`time-${planDayId}`}
-              value={timeOfDay}
-              onChange={(e) => setTimeOfDay(e.target.value as TimeOfDay)}
-              className={cn(
-                "h-8 w-full rounded-lg border border-white/15 bg-white/5 px-2.5 text-sm",
-              )}
-            >
-              {(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map((t) => (
-                <option key={t} value={t}>
-                  {TIME_OF_DAY_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ReadableSelect
+            id={`time-${planDayId}`}
+            label="Pora dnia"
+            value={timeOfDay}
+            onChange={(v) => setTimeOfDay(v as TimeOfDay)}
+            options={(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map(
+              (t) => ({ value: t, label: TIME_OF_DAY_LABELS[t] }),
+            )}
+          />
         </>
       )}
 

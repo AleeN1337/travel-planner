@@ -28,6 +28,7 @@ export async function generatePlanWithStream(
 ): Promise<string> {
   const res = await fetch("/api/plans/generate", {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",

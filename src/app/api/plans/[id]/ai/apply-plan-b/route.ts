@@ -4,6 +4,7 @@ import { applyPlanBForDay } from "@/lib/ai/apply-plan-b";
 import { getTripPlanById } from "@/lib/plans/get-plan";
 import { geocodePlanDay } from "@/lib/plans/geocode-day";
 import { replacePlanDay } from "@/lib/plans/persist-plan";
+import { ensurePlanWrite } from "@/lib/plans/plan-access-response";
 import { guardWriteRequest } from "@/lib/security/api-guard";
 
 const bodySchema = z.object({
@@ -16,6 +17,9 @@ export const maxDuration = 90;
 
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
+  const access = await ensurePlanWrite(id);
+  if (!access.ok) return access.response;
+
   const guarded = await guardWriteRequest(request, "ai", bodySchema);
   if (!guarded.ok) return guarded.response;
 

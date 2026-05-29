@@ -17,7 +17,11 @@ import { AddActivityForm } from "@/components/plan/add-activity-form";
 import { RegenerateDayButton } from "@/components/plan/regenerate-day-button";
 import { DayRouteBadge } from "@/components/plan/day-route-badge";
 import type { DayRouteInsight } from "@/lib/plans/day-route-analysis";
-import { PlanBSection } from "@/components/plan/plan-b-section";
+import { PlanBVotingSection } from "@/components/plan/plan-b-voting-section";
+import type {
+  ActivityCommentDto,
+  PlanBVoteSummaryDto,
+} from "@/lib/plans/collaboration/types";
 import { SortableActivity } from "@/components/plan/sortable-activity";
 import type { ActivityWithCoords } from "@/lib/plans/plan-utils";
 import type { PlanBAlternative, TimeOfDay } from "@/generated/prisma/client";
@@ -43,6 +47,10 @@ type EditableDayColumnProps = {
   onRegenerated: () => void;
   routeInsight?: DayRouteInsight;
   isSaving: boolean;
+  commentsByActivityId?: Record<string, ActivityCommentDto[]>;
+  planBVotes?: PlanBVoteSummaryDto[];
+  hasMember?: boolean;
+  onCollaborationChange?: () => void;
 };
 
 export function EditableDayColumn({
@@ -59,6 +67,10 @@ export function EditableDayColumn({
   onRegenerated,
   routeInsight,
   isSaving,
+  commentsByActivityId,
+  planBVotes,
+  hasMember,
+  onCollaborationChange,
 }: EditableDayColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: dayId });
 
@@ -114,6 +126,10 @@ export function EditableDayColumn({
                   index={index}
                   onDelete={onDelete}
                   isSaving={isSaving}
+                  planId={planId}
+                  comments={commentsByActivityId?.[id]}
+                  hasMember={hasMember}
+                  onCollaborationChange={onCollaborationChange}
                 />
               );
             })}
@@ -125,7 +141,15 @@ export function EditableDayColumn({
           onAdd={onAdd}
           disabled={isSaving}
         />
-        <PlanBSection alternatives={planBAlternatives} />
+        {onCollaborationChange ?
+          <PlanBVotingSection
+            planId={planId}
+            alternatives={planBAlternatives}
+            voteSummaries={planBVotes ?? []}
+            hasMember={Boolean(hasMember)}
+            onChanged={onCollaborationChange}
+          />
+        : null}
       </CardContent>
     </Card>
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteActivity, updateActivity } from "@/lib/plans/activity-actions";
+import { ensurePlanWrite } from "@/lib/plans/plan-access-response";
 import { enforceRateLimit, guardWriteRequest } from "@/lib/security/api-guard";
 
 const patchSchema = z.object({
@@ -18,6 +19,9 @@ type RouteContext = {
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { id, activityId } = await context.params;
+  const access = await ensurePlanWrite(id);
+  if (!access.ok) return access.response;
+
   const guarded = await guardWriteRequest(request, "api", patchSchema);
   if (!guarded.ok) return guarded.response;
 
@@ -35,6 +39,8 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (limited) return limited;
 
   const { id, activityId } = await context.params;
+  const access = await ensurePlanWrite(id);
+  if (!access.ok) return access.response;
 
   try {
     await deleteActivity(id, activityId);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guestPlanCookieHeader } from "@/lib/plans/guest-plan-cookie";
 import { generatePlanVariantFromSource } from "@/lib/plans/generate-variant";
+import { ensurePlanOwner } from "@/lib/plans/plan-access-response";
 import { guardWriteRequest } from "@/lib/security/api-guard";
 
 const bodySchema = z.object({
@@ -14,6 +15,9 @@ export const maxDuration = 120;
 
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
+  const access = await ensurePlanOwner(id);
+  if (!access.ok) return access.response;
+
   const guarded = await guardWriteRequest(request, "generate", bodySchema);
   if (!guarded.ok) return guarded.response;
 
